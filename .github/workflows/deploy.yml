@@ -130,6 +130,11 @@ jobs:
             stripePriceProf="${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }}"
             stripePriceEnterprise="${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }}"
             serviceBusConnectionString="${{ secrets.SERVICE_BUS_CONN_STR || 'not-configured' }}"
+            azureCommunicationConnectionString="${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING || 'not-configured' }}"
+            prismragEmailFrom="${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }}"
+            acrUsername="${{ secrets.ACR_USERNAME }}"
+            acrPassword="${{ secrets.ACR_PASSWORD }}"
+            prismragBaseUrl="${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}"
           deploymentMode: Incremental
 
       - name: Wait for API health

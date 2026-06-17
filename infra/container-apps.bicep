@@ -54,6 +54,23 @@ param stripePriceEnterprise string
 @description('Azure Service Bus connection string (for large-file async worker queue).')
 param serviceBusConnectionString string = ''
 
+@secure()
+@description('Azure Communication Services connection string (transactional email).')
+param azureCommunicationConnectionString string = ''
+
+@description('Verified ACS sender address (e.g. PrismRAG@insightits.com).')
+param prismragEmailFrom string = 'PrismRAG@insightits.com'
+
+@description('ACR admin username (for image pull when SP cannot assign AcrPull).')
+param acrUsername string
+
+@secure()
+@description('ACR admin password.')
+param acrPassword string
+
+@description('Public base URL for password-reset links, Stripe redirects, OIDC callbacks.')
+param prismragBaseUrl string = 'https://prismrag.insightits.com'
+
 
 // ── Log Analytics workspace ────────────────────────────────────────────────
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
@@ -68,22 +85,13 @@ resource pullIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-
   location: location
 }
 
-// ── Reference the existing ACR for role assignment ─────────────────────────
+// ── Reference the existing ACR ─────────────────────────────────────────────
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: acrName
 }
 
-var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d' // AcrPull built-in
-
-resource acrPullAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, pullIdentity.id, acrPullRoleId)
-  scope: acr
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
-    principalId: pullIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
+// AcrPull via managed identity requires roleAssignments/write on the deploy SP.
+// Use ACR admin credentials (ACR_USERNAME / ACR_PASSWORD GitHub secrets) instead.
 
 // ── Azure Postgres Flexible Server (Phase 2+, skipped in Phase 1) ─────────
 resource pgServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-03-01-preview' = if (!externalDb) {
@@ -145,11 +153,15 @@ var sharedEnv = [
   { name: 'GEMINI_API_KEY',              secretRef: 'gemini-key' }
   { name: 'STRIPE_SECRET_KEY',           secretRef: 'stripe-secret' }
   { name: 'STRIPE_WEBHOOK_SECRET',       secretRef: 'stripe-webhook' }
-  { name: 'AZURE_SERVICE_BUS_CONN_STR',  secretRef: 'servicebus-conn' }
+  { name: 'AZURE_SERVICE_BUS_CONNECTION_STRING', secretRef: 'servicebus-conn' }
   { name: 'STRIPE_PRICE_STARTER',        value: stripePriceStarter }
   { name: 'STRIPE_PRICE_PROFESSIONAL',   value: stripePriceProf }
   { name: 'STRIPE_PRICE_ENTERPRISE',     value: stripePriceEnterprise }
   { name: 'PRISMRAG_ENV',                value: 'production' }
+  { name: 'AZURE_COMMUNICATION_CONNECTION_STRING', secretRef: 'acs-conn' }
+  { name: 'PRISMRAG_EMAIL_FROM',         value: prismragEmailFrom }
+  { name: 'PRISMRAG_EMAIL_ENABLED',      value: 'true' }
+  { name: 'PRISMRAG_BASE_URL',           value: prismragBaseUrl }
 ]
 
 var sharedSecrets = [
@@ -160,12 +172,15 @@ var sharedSecrets = [
   { name: 'stripe-webhook',  value: empty(stripeWebhookSecret)        ? 'not-configured' : stripeWebhookSecret }
   { name: 'redis-url',       value: resolvedRedisUrl }
   { name: 'servicebus-conn', value: empty(serviceBusConnectionString)  ? 'not-configured' : serviceBusConnectionString }
+  { name: 'acs-conn',        value: empty(azureCommunicationConnectionString) ? 'not-configured' : azureCommunicationConnectionString }
+  { name: 'acr-password',    value: acrPassword }
 ]
 
 var registryConfig = [
   {
     server: acrLoginServer
-    identity: pullIdentity.id  // managed identity — no password needed
+    username: acrUsername
+    passwordSecretRef: 'acr-password'
   }
 ]
 
@@ -177,7 +192,6 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
     type: 'UserAssigned'
     userAssignedIdentities: { '${pullIdentity.id}': {} }
   }
-  dependsOn: [acrPullAssignment]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
@@ -239,7 +253,6 @@ resource workerApp 'Microsoft.App/containerApps@2023-05-01' = {
     type: 'UserAssigned'
     userAssignedIdentities: { '${pullIdentity.id}': {} }
   }
-  dependsOn: [acrPullAssignment]
   properties: {
     managedEnvironmentId: env.id
     configuration: {
