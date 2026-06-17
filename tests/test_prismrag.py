@@ -6,15 +6,26 @@ from tests.conftest import DOMAIN_CONFIGS, HEALTHCARE_MAPPING, PHARMACY_MAPPING,
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def ingest_job(authed_api, tenant_id, mapping, strategy="rules", source_type="api"):
+def ingest_job(authed_api, tenant_id, mapping, strategy="rules", source_type="inline"):
     """Post a job and wait until it completes. Returns job dict."""
     payload = {
         "tenant_id":   tenant_id,
         "source_type": source_type,
         "strategy":    strategy,
         "mapping":     mapping,
-        "source_data": {"words": [r["word"] for r in mapping["rules"]]},
+        "inline_config": {
+            "records": [
+                {
+                    "word": r["word"],
+                    "text": r["word"].replace("_", " "),
+                }
+                for r in mapping["rules"]
+            ],
+        },
     }
+    if source_type == "api":
+        payload["api_config"] = {"url": "https://example.invalid/data"}
+        payload.pop("inline_config", None)
     r = authed_api.post(authed_api.url("/api/prismrag/jobs"), json=payload)
     assert r.status_code in (200, 201, 202), f"Job submit failed: {r.status_code} {r.text}"
     job = r.json()
@@ -76,20 +87,58 @@ class TestIngest:
     def test_invalid_tenant_rejected(self, authed_api):
         r = authed_api.post(authed_api.url("/api/prismrag/jobs"), json={
             "tenant_id":   "00000000-0000-0000-0000-000000000000",
-            "source_type": "api",
+            "source_type": "inline",
             "strategy":    "rules",
-            "mapping":     {"categories": [], "rules": []},
+            "mapping":     HEALTHCARE_MAPPING,
+            "inline_config": {
+                "records": [{"word": "hypertension", "text": "hypertension"}],
+            },
         })
         assert r.status_code in (403, 404, 422)
 
     def test_empty_rules_rejected(self, authed_api, healthcare_tenant):
         r = authed_api.post(authed_api.url("/api/prismrag/jobs"), json={
             "tenant_id":   healthcare_tenant,
-            "source_type": "api",
+            "source_type": "inline",
             "strategy":    "rules",
             "mapping":     {"categories": [{"slug": "a", "label": "A"}], "rules": []},
+            "inline_config": {"records": [{"word": "test"}]},
         })
-        assert r.status_code in (400, 422)
+        assert r.status_code == 422
+
+    def test_unknown_category_in_rules_rejected(self, authed_api, healthcare_tenant):
+        r = authed_api.post(authed_api.url("/api/prismrag/jobs"), json={
+            "tenant_id":   healthcare_tenant,
+            "source_type": "inline",
+            "strategy":    "rules",
+            "mapping": {
+                "categories": [{"slug": "a", "label": "A"}],
+                "rules": [{"word": "foo", "category_slug": "missing"}],
+            },
+            "inline_config": {"records": [{"word": "foo"}]},
+        })
+        assert r.status_code == 422
+        assert "category_slug" in r.text.lower()
+
+    def test_api_without_config_rejected(self, authed_api, healthcare_tenant):
+        r = authed_api.post(authed_api.url("/api/prismrag/jobs"), json={
+            "tenant_id":   healthcare_tenant,
+            "source_type": "api",
+            "strategy":    "rules",
+            "mapping":     HEALTHCARE_MAPPING,
+        })
+        assert r.status_code == 422
+
+    def test_file_source_json_endpoint_rejected(self, authed_api, healthcare_tenant):
+        r = authed_api.post(authed_api.url("/api/prismrag/jobs"), json={
+            "tenant_id":   healthcare_tenant,
+            "source_type": "file",
+            "strategy":    "rules",
+            "mapping":     HEALTHCARE_MAPPING,
+            "file_config": {"filename": "data.csv"},
+        })
+        assert r.status_code == 422
+        assert "jobs/upload" in r.text
 
 
 # ── Search tests ─────────────────────────────────────────────────────────────

@@ -319,15 +319,29 @@ def _handle_submit_job(args: dict) -> str:
     tenant = args.get("tenant_id") or TENANT_ID
     if not tenant:
         return "Error: tenant_id required."
-    import uuid
+    categories = args.get("categories", [])
+    rules = args.get("rules", [])
+    records = []
+    for rule in rules:
+        word = (rule.get("word") or "").strip()
+        if not word:
+            continue
+        records.append({
+            "word": word,
+            "text": rule.get("text") or word.replace("_", " "),
+            "category_hint": rule.get("category_slug"),
+        })
+    if not records:
+        return "Error: at least one rule with a word is required."
     result = _call("post", "/api/prismrag/jobs", json={
         "tenant_id":   tenant,
-        "source_type": "file",
+        "source_type": "inline",
         "strategy":    args.get("strategy", "rules"),
         "mapping": {
-            "categories": args.get("categories", []),
-            "rules":      args.get("rules", []),
-        }
+            "categories": categories,
+            "rules":      rules,
+        },
+        "inline_config": {"records": records},
     })
     return (
         f"Job submitted: {result.get('job_id')}\n"

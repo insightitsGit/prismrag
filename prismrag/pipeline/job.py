@@ -214,6 +214,10 @@ def _build_adapter(request: JobRequest, upload_bytes: bytes | None = None):
         from prismrag.adapters.chunk import ChunkAdapter
         return ChunkAdapter(request.chunk_config)
 
+    if request.source_type == SourceType.inline:
+        from prismrag.adapters.inline import InlineAdapter
+        return InlineAdapter(request.inline_config)
+
     raise NotImplementedError(f"Source type {request.source_type} not implemented")
 
 

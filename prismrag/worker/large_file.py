@@ -104,6 +104,7 @@ def enqueue_large_job(
     tenant_id: str,
     strategy: str,
     user_id: str,
+    mapping: dict | None = None,
 ) -> str:
     """
     Called after client confirms upload is done.
@@ -147,6 +148,7 @@ def enqueue_large_job(
         "blob_name": blob_name,
         "size_bytes": size_bytes,
         "stream_mode": (size_bytes or 0) > STREAM_THRESHOLD,
+        "mapping":   mapping or {},
     })
     _send_to_service_bus(message)
     return job_id
@@ -178,14 +180,15 @@ def process_large_file(message: dict) -> None:
         data = blob_client.download_blob().readall()
         from prismrag.pipeline.job import run_job
         from prismrag.models import (
-            FileSourceConfig, JobRequest, MappingConfigIn, SourceType
+            FileSourceConfig, JobRequest, MappingConfigIn, SourceType, StrategyType,
         )
+        mapping_data = message.get("mapping") or {}
         request = JobRequest(
             tenant_id=uuid.UUID(tenant_id),
             source_type=SourceType.file,
-            strategy=strategy,
+            strategy=StrategyType(strategy),
             file_config=FileSourceConfig(filename=blob_name.split("/")[-1]),
-            mapping=MappingConfigIn(categories=[], rules=[]),
+            mapping=MappingConfigIn.model_validate(mapping_data),
         )
         run_job(job_id, request, data)
 

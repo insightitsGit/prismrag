@@ -171,6 +171,30 @@ Submit an ingest job via JSON body (for SQL, API, or chunk source types).
 
 `strategy`: `"rules"` (Tier 1, always available) or `"mlp"` (Tier 2, Professional+).
 
+`source_type` options:
+- `"inline"` — supply `inline_config.records` directly (best for small payloads)
+- `"api"` — requires `api_config.url` pointing at your paginated REST API
+- `"sql"` — requires `sql_config`
+- `"chunk"` — requires `chunk_config`
+- `"file"` — use `POST /api/prismrag/jobs/upload` instead (multipart)
+
+**Inline example:**
+```json
+{
+  "tenant_id": "uuid",
+  "source_type": "inline",
+  "strategy": "rules",
+  "mapping": { "categories": [...], "rules": [...] },
+  "inline_config": {
+    "records": [
+      { "word": "volatility", "text": "Q3 volatility exposure" }
+    ]
+  }
+}
+```
+
+Invalid payloads return **422** before the job is queued (unknown `category_slug`, missing `api_config`, duplicate rule words, etc.).
+
 **Response 200**
 ```json
 {
@@ -186,15 +210,20 @@ Submit an ingest job via JSON body (for SQL, API, or chunk source types).
 
 ### POST /api/prismrag/jobs/upload
 
-Submit a file-based job (multipart/form-data). File must have `word` and `category` columns (CSV/Excel).
+Submit a file-based job (multipart/form-data). **mapping is required.**
 
 ```bash
 curl -X POST https://api.prismrag.io/api/prismrag/jobs/upload \
   -H "Authorization: Bearer YOUR_KEY" \
-  -F "file=@mapping.csv" \
+  -F "file=@corpus.csv" \
   -F "tenant_id=YOUR_TENANT_UUID" \
+  -F 'mapping={"categories":[{"slug":"risk","label":"Risk"}],"rules":[{"word":"volatility","category_slug":"risk"}]}' \
   -F "strategy=rules"
 ```
+
+Optional form fields: `word_column` (default `word`), `text_column` (default `text`), `category_column`.
+
+Validation errors return **422** with a clear message (missing columns, unknown category slugs in file, invalid mapping JSON, etc.).
 
 Files < 1 MB run synchronously and return `status: completed`. Larger files return `status: queued`.
 

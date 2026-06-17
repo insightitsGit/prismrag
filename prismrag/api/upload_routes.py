@@ -10,10 +10,13 @@ Flow:
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from prismrag.auth.auth import get_current_user
-from prismrag.metering.quota import check_feature
+from prismrag.models import (
+    FileSourceConfig, JobRequest, MappingConfigIn, SourceType, StrategyType,
+)
+from prismrag.validation import validate_job_submit
 
 upload_router = APIRouter(prefix="/api/prismrag/upload", tags=["Upload"])
 
@@ -37,6 +40,10 @@ class ConfirmRequest(BaseModel):
     upload_id: str
     tenant_id: str
     strategy:  str = "rules"
+    mapping:   dict = Field(
+        ...,
+        description="Required mapping object with categories and rules",
+    )
 
 
 @upload_router.post("/presign", response_model=PresignResponse)
@@ -79,6 +86,34 @@ def confirm_upload(body: ConfirmRequest, user: dict = Depends(get_current_user))
     Step 2: Client confirms the PUT completed.
     We verify the blob exists then enqueue the ingest job.
     """
+    try:
+        mapping = MappingConfigIn.model_validate(body.mapping)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    try:
+        strategy = StrategyType(body.strategy)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid strategy '{body.strategy}'. Use 'rules' or 'mlp'.",
+        ) from exc
+
+    import uuid as _uuid
+    try:
+        tenant_uuid = _uuid.UUID(body.tenant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="tenant_id must be a valid UUID") from exc
+
+    stub = JobRequest(
+        tenant_id=tenant_uuid,
+        source_type=SourceType.file,
+        strategy=strategy,
+        file_config=FileSourceConfig(filename="large_upload.csv"),
+        mapping=mapping,
+    )
+    validate_job_submit(stub, user, allow_file_source=True)
+
     from prismrag.worker.large_file import enqueue_large_job
     try:
         job_id = enqueue_large_job(
@@ -86,6 +121,7 @@ def confirm_upload(body: ConfirmRequest, user: dict = Depends(get_current_user))
             tenant_id=body.tenant_id,
             strategy=body.strategy,
             user_id=user["id"],
+            mapping=mapping.model_dump(),
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

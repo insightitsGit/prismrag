@@ -1,22 +1,29 @@
 """PrismRAG — FastAPI routes."""
 from __future__ import annotations
 
-import threading
+import logging
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
 
 from prismrag.models import (
     BridgeRequest, BridgeResponse,
-    JobRequest, JobResponse, JobStatus, JobStatusResponse,
+    FileSourceConfig, JobRequest, JobResponse, JobStatus, JobStatusResponse,
     SearchRequest, SearchResponse,
-    StrategyType,
+    SourceType, StrategyType,
 )
 from prismrag.pipeline.job import create_job, get_job, run_job
 from prismrag.auth.auth import get_current_user
-from prismrag.metering.quota import check_and_record, check_feature, metered, PLAN_LIMITS
+from prismrag.metering.quota import check_and_record, metered, PLAN_LIMITS
+from prismrag.validation import (
+    parse_mapping_json,
+    validate_file_category_hints,
+    validate_file_columns,
+    validate_job_submit,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/prismrag", tags=["PrismRAG"])
 
@@ -43,29 +50,15 @@ async def submit_job(
     status=completed immediately. For large datasets it queues and returns
     status=queued with a status_url to poll.
     """
-    from prismrag.config import SYNC_MAX_RECORDS
-
     tenant_id = str(request.tenant_id)
     _ensure_tenant_exists(tenant_id)
     _check_tenant_quota(user)
-
-    if not request.mapping or not request.mapping.rules:
-        raise HTTPException(
-            status_code=422,
-            detail="mapping.rules is required. Provide at least one word→category rule.",
-        )
+    validate_job_submit(request, user, allow_file_source=False)
 
     job_id = create_job(tenant_id, request)
     status_url = f"/api/prismrag/jobs/{job_id}"
 
-    # Inline sync for small datasets
-    estimated = len(request.mapping.rules)
-    if estimated <= SYNC_MAX_RECORDS and request.source_type.value == "file":
-        # File uploads need to be handled separately (no bytes here)
-        pass
-
-    # Default: background
-    background_tasks.add_task(_run_job_bg, job_id, request, None)
+    background_tasks.add_task(_run_job_bg, job_id, request, None, user)
 
     return JobResponse(
         job_id=job_id,
@@ -81,31 +74,66 @@ async def submit_job_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     tenant_id: str = Form(...),
+    mapping: str = Form(..., description="JSON mapping: {categories, rules}"),
     strategy: str = Form("rules"),
-    source_type: str = Form("file"),
+    word_column: str = Form("word"),
+    text_column: str = Form("text"),
+    category_column: str | None = Form(None),
     user: dict = Depends(get_current_user),
 ):
     """Submit a file-based ingest job (multipart/form-data)."""
-    from prismrag.models import FileSourceConfig, MappingConfigIn, SourceType
     _ensure_tenant_exists(tenant_id)
     _check_tenant_quota(user)
-    request = JobRequest(
-        tenant_id=uuid.UUID(tenant_id),
-        source_type=SourceType(source_type),
-        strategy=strategy,
-        file_config=FileSourceConfig(filename=file.filename or "upload.csv"),
-        mapping=MappingConfigIn(categories=[], rules=[]),
+
+    try:
+        tenant_uuid = uuid.UUID(tenant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="tenant_id must be a valid UUID") from exc
+
+    try:
+        strategy_enum = StrategyType(strategy)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid strategy '{strategy}'. Use 'rules' or 'mlp'.",
+        ) from exc
+
+    mapping_config = parse_mapping_json(mapping)
+    file_config = FileSourceConfig(
+        filename=file.filename or "upload.csv",
+        word_column=word_column,
+        text_column=text_column,
+        category_column=category_column or None,
     )
 
+    request = JobRequest(
+        tenant_id=tenant_uuid,
+        source_type=SourceType.file,
+        strategy=strategy_enum,
+        file_config=file_config,
+        mapping=mapping_config,
+    )
+    validate_job_submit(request, user, allow_file_source=True)
+
     upload_bytes = await file.read()
+    if not upload_bytes:
+        raise HTTPException(status_code=422, detail="Uploaded file is empty.")
+
+    validate_file_columns(upload_bytes, file_config)
+    validate_file_category_hints(upload_bytes, file_config, mapping_config)
+
     job_id     = create_job(tenant_id, request)
     status_url = f"/api/prismrag/jobs/{job_id}"
 
     if len(upload_bytes) < 1_000_000:  # < 1 MB → sync
         try:
             run_job(job_id, request, upload_bytes)
-            # Record ingest usage after completion (chunk count comes from job)
             job = get_job(job_id)
+            if job and job.get("status") == "failed":
+                raise HTTPException(
+                    status_code=422,
+                    detail=job.get("errorMessage") or "Ingest job failed",
+                )
             chunks = job.get("recordsWritten", 0) if job else 0
             if chunks > 0:
                 check_and_record(user, "ingest_chunk", chunks, tenant_id)
@@ -115,8 +143,9 @@ async def submit_job_file(
             )
         except HTTPException:
             raise
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.exception("Sync file ingest failed for job %s", job_id)
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     background_tasks.add_task(_run_job_bg, job_id, request, upload_bytes, user)
     return JobResponse(
