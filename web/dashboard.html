@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — PrismRAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/landing.css"/>
+  <link rel="stylesheet" href="/static/css/dashboard.css"/>
+</head>
+<body class="dash-body">
+
+<!-- ── SIDEBAR ────────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top">
+    <a href="/" class="logo sidebar-logo">
+      <span class="logo-prism">⬡</span>
+      <span class="logo-text">PrismRAG</span>
+    </a>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-section="overview">
+        <span class="nav-icon">◎</span> Overview
+      </a>
+      <a href="#" class="nav-item" data-section="workspaces">
+        <span class="nav-icon">⬡</span> Workspaces
+      </a>
+      <a href="#" class="nav-item" data-section="jobs">
+        <span class="nav-icon">◈</span> Ingest Jobs
+      </a>
+      <a href="#" class="nav-item" data-section="apikeys">
+        <span class="nav-icon">◉</span> API Keys
+      </a>
+      <a href="#" class="nav-item" data-section="billing">
+        <span class="nav-icon">◇</span> Billing
+      </a>
+    </nav>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="user-chip" id="user-chip">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <div class="user-info">
+        <span class="user-name" id="user-name">Loading…</span>
+        <span class="user-plan" id="user-plan-badge">free</span>
+      </div>
+    </div>
+    <a href="#" id="signout-btn" class="signout-btn">Sign out</a>
+  </div>
+</aside>
+
+<!-- ── MAIN ───────────────────────────────────────────────────────────────── -->
+<main class="dash-main">
+
+  <!-- OVERVIEW -->
+  <section class="dash-section active" id="sec-overview">
+    <div class="dash-header">
+      <h1>Overview</h1>
+      <p>Your workspace at a glance</p>
+    </div>
+
+    <div class="stat-row" id="stat-row">
+      <div class="stat-card">
+        <span class="stat-label-sm">Plan</span>
+        <span class="stat-value" id="ov-plan">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label-sm">Chunks this month</span>
+        <div class="stat-with-bar">
+          <span class="stat-value" id="ov-chunks">—</span>
+          <div class="quota-bar"><div class="quota-fill" id="quota-fill" style="width:0%"></div></div>
+          <span class="stat-quota" id="ov-quota">/ —</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label-sm">Active workspaces</span>
+        <span class="stat-value" id="ov-tenants">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label-sm">Searches this month</span>
+        <span class="stat-value" id="ov-searches">—</span>
+      </div>
+    </div>
+
+    <div class="dash-grid-2">
+      <div class="dash-card">
+        <div class="card-header">
+          <h2>Quick start</h2>
+        </div>
+        <div class="quickstart-steps">
+          <div class="qs-step done" id="qs-account">
+            <span class="qs-check">✓</span>
+            <div>
+              <strong>Create account</strong>
+              <p>You're in. Welcome.</p>
+            </div>
+          </div>
+          <div class="qs-step" id="qs-apikey">
+            <span class="qs-check">2</span>
+            <div>
+              <strong>Generate an API key</strong>
+              <p>Use it to authenticate requests.</p>
+            </div>
+            <a href="#" class="qs-action" data-goto="apikeys">Create key →</a>
+          </div>
+          <div class="qs-step" id="qs-job">
+            <span class="qs-check">3</span>
+            <div>
+              <strong>Submit your first ingest job</strong>
+              <p>Upload a CSV with your mapping rules.</p>
+            </div>
+            <a href="#" class="qs-action" data-goto="jobs">New job →</a>
+          </div>
+          <div class="qs-step" id="qs-search">
+            <span class="qs-check">4</span>
+            <div>
+              <strong>Query your knowledge graph</strong>
+              <p>POST /api/prismrag/search with your first query.</p>
+            </div>
+            <a href="/docs" class="qs-action" target="_blank">View docs →</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <div class="card-header">
+          <h2>API snippet</h2>
+          <button class="copy-btn" id="copy-snippet">Copy</button>
+        </div>
+        <pre class="dash-code" id="api-snippet"><span class="c-comment"># Your first search</span>
+curl -X POST https://api.prismrag.io/api/prismrag/search \
+  -H <span class="c-str">"Authorization: Bearer YOUR_API_KEY"</span> \
+  -H <span class="c-str">"Content-Type: application/json"</span> \
+  -d '{
+    <span class="c-key">"tenant_id"</span>: <span class="c-str">"YOUR_TENANT_ID"</span>,
+    <span class="c-key">"query"</span>: <span class="c-str">"quarterly risk exposure"</span>,
+    <span class="c-key">"top_k"</span>: 10
+  }'</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKSPACES -->
+  <section class="dash-section" id="sec-workspaces">
+    <div class="dash-header">
+      <h1>Workspaces</h1>
+      <p>Each workspace is an isolated tenant with its own vector space and knowledge graph</p>
+    </div>
+    <div class="dash-card" id="tenants-card">
+      <div class="card-header">
+        <h2>Your workspaces</h2>
+        <button class="btn-sm-primary" id="create-tenant-btn">+ New workspace</button>
+      </div>
+      <div id="tenants-list" class="table-wrap">
+        <div class="loading-state">Loading workspaces…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INGEST JOBS -->
+  <section class="dash-section" id="sec-jobs">
+    <div class="dash-header">
+      <h1>Ingest Jobs</h1>
+      <p>Track your mapping pipelines — from CSV upload to fully indexed knowledge graph</p>
+    </div>
+
+    <div class="dash-card" id="new-job-card">
+      <div class="card-header">
+        <h2>Submit a new job</h2>
+        <span class="card-hint">Upload a CSV with <code>word</code> and <code>category</code> columns</span>
+      </div>
+      <form id="job-form" class="job-form">
+        <div class="field-row">
+          <div class="field">
+            <label>Workspace (tenant ID)</label>
+            <input type="text" id="job-tenant" placeholder="paste tenant UUID" required/>
+          </div>
+          <div class="field">
+            <label>Strategy</label>
+            <select id="job-strategy">
+              <option value="rules">Tier 1 — Rules (explicit, auditable)</option>
+              <option value="mlp">Tier 2 — MLP (trains on your rules)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Mapping CSV <span class="field-hint">columns: word, category_slug, [text]</span></label>
+          <div class="file-drop" id="file-drop">
+            <span class="file-drop-icon">↑</span>
+            <span id="file-drop-label">Drag & drop or <label for="file-input" class="file-link">browse file</label></span>
+            <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none"/>
+          </div>
+        </div>
+        <button type="submit" class="auth-submit" id="job-submit-btn" style="max-width:220px">Submit job</button>
+      </form>
+    </div>
+
+    <div class="dash-card" style="margin-top:20px">
+      <div class="card-header">
+        <h2>Recent jobs</h2>
+        <button class="btn-sm-ghost" id="refresh-jobs-btn">↻ Refresh</button>
+      </div>
+      <div id="jobs-list" class="table-wrap">
+        <div class="loading-state">Loading jobs…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- API KEYS -->
+  <section class="dash-section" id="sec-apikeys">
+    <div class="dash-header">
+      <h1>API Keys</h1>
+      <p>Authenticate your requests with a secret key. Keys are shown only once — store them safely.</p>
+    </div>
+    <div class="dash-card">
+      <div class="card-header">
+        <h2>Your keys</h2>
+        <button class="btn-sm-primary" id="create-key-btn">+ Generate key</button>
+      </div>
+      <div id="keys-list" class="table-wrap">
+        <div class="loading-state">Loading keys…</div>
+      </div>
+    </div>
+
+    <div class="new-key-reveal" id="new-key-reveal" style="display:none">
+      <div class="new-key-inner">
+        <div class="new-key-header">
+          <span class="new-key-icon">🔑</span>
+          <h3>Your new API key</h3>
+          <p>Copy it now — it won't be shown again.</p>
+        </div>
+        <div class="key-display">
+          <code id="new-key-value">prk_…</code>
+          <button class="copy-btn" id="copy-key-btn">Copy</button>
+        </div>
+        <button class="btn-sm-ghost" id="key-done-btn">I've saved it</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BILLING -->
+  <section class="dash-section" id="sec-billing">
+    <div class="dash-header">
+      <h1>Billing</h1>
+      <p>Manage your subscription and usage</p>
+    </div>
+
+    <div class="current-plan-card" id="current-plan-card">
+      <div class="plan-left">
+        <div class="plan-badge" id="billing-plan-badge">free</div>
+        <div>
+          <h2 id="billing-plan-name">Free Plan</h2>
+          <p id="billing-plan-desc" class="plan-desc-text">5,000 chunks / month · 1 workspace</p>
+        </div>
+      </div>
+      <div class="plan-right">
+        <button class="btn-sm-primary" id="manage-billing-btn">Manage billing</button>
+      </div>
+    </div>
+
+    <div class="pricing-grid dash-pricing" id="billing-plans">
+      <!-- injected by JS -->
+    </div>
+  </section>
+
+</main>
+
+<!-- ── NEW WORKSPACE MODAL ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="tenant-modal" style="display:none">
+  <div class="modal-card">
+    <h2>New workspace</h2>
+    <div class="field" style="margin-top:16px">
+      <label>Workspace name</label>
+      <input type="text" id="tenant-name-input" placeholder="e.g. Finance Q4 Corpus"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm-ghost" id="tenant-modal-cancel">Cancel</button>
+      <button class="btn-sm-primary" id="tenant-modal-confirm">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay-bg" style="display:none"></div>
+
+<link rel="stylesheet" href="/static/css/dashboard.css"/>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

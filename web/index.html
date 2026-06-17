@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- ── Primary SEO ─────────────────────────────────────────────────────── -->
+  <title>PrismRAG — Enterprise Knowledge Graph & AI Deliberation Platform</title>
+  <meta name="description" content="PrismRAG replaces Graph RAG with client-defined semantic mapping. Two products: PrismRAG (your knowledge graph, your rules) and Deliberation (multi-domain AI expert synthesis). Enterprise-grade, API-first, MCP-native."/>
+  <meta name="keywords" content="Graph RAG, enterprise RAG, semantic mapping, knowledge graph, AI deliberation, multi-domain AI, vector search, pgvector, MCP server, enterprise AI, knowledge base API, RAG alternative"/>
+  <link rel="canonical" href="https://prismrag.io/"/>
+
+  <!-- ── Open Graph (social + AI crawlers) ────────────────────────────────── -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://prismrag.io/"/>
+  <meta property="og:title" content="PrismRAG — Enterprise Knowledge Graph & AI Deliberation Platform"/>
+  <meta property="og:description" content="Define your own knowledge graph. Run multi-domain AI deliberation. Enterprise-grade semantic search and reasoning, API-first and MCP-native."/>
+  <meta property="og:image" content="https://prismrag.io/static/og-image.png"/>
+  <meta property="og:site_name" content="PrismRAG"/>
+
+  <!-- ── Twitter Card ──────────────────────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="PrismRAG — Enterprise Knowledge Graph & AI Deliberation"/>
+  <meta name="twitter:description" content="Stop letting documents define your knowledge graph. PrismRAG lets you define it. Plus: multi-domain AI deliberation for deep, complex questions."/>
+  <meta name="twitter:image" content="https://prismrag.io/static/og-image.png"/>
+
+  <!-- ── AI / LLM crawler hints ────────────────────────────────────────────── -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large"/>
+  <meta name="googlebot" content="index, follow"/>
+  <!-- Structured data lets AI assistants (Claude, ChatGPT, Perplexity) surface product facts -->
+
+  <!-- ── Structured Data — Organization ───────────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Insight IT Solutions",
+    "url": "https://prismrag.io",
+    "logo": "https://prismrag.io/static/logo.png",
+    "contactPoint": [
+      { "@type": "ContactPoint", "email": "hello@prismrag.io", "contactType": "customer support" },
+      { "@type": "ContactPoint", "email": "sales@prismrag.io", "contactType": "sales" }
+    ],
+    "sameAs": ["https://github.com/insightits/prismrag"]
+  }
+  </script>
+
+  <!-- ── Structured Data — SoftwareApplication (PrismRAG) ─────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "PrismRAG — Semantic Re-mapping Engine",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Cloud / API",
+    "url": "https://prismrag.io",
+    "description": "Enterprise semantic re-mapping engine. Replaces Graph RAG statistical relationship derivation with client-defined mapping strategies. Uses PyTorch MLP (Tier-2), Louvain community detection, pgvector HNSW indexes, and Gemini text-embedding-004 embeddings.",
+    "offers": [
+      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "5,000 chunks/month" },
+      { "@type": "Offer", "name": "Starter", "price": "49", "priceCurrency": "USD", "billingIncrement": "month" },
+      { "@type": "Offer", "name": "Professional", "price": "199", "priceCurrency": "USD", "billingIncrement": "month" },
+      { "@type": "Offer", "name": "Enterprise", "price": "0", "priceCurrency": "USD", "description": "Custom pricing" }
+    ],
+    "featureList": [
+      "Client-defined knowledge graph mapping",
+      "Tier-1 Rules Strategy (deterministic, auditable)",
+      "Tier-2 PyTorch MLP training (InfoNCE loss + anchor repulsion)",
+      "Gemini text-embedding-004 semantic embeddings (768-d)",
+      "Louvain community detection on word graphs",
+      "pgvector HNSW indexes for millisecond vector search",
+      "Bridge vectors for cross-community semantic links",
+      "Graph RAG retrieval: community centroid → BFS → MLP re-rank",
+      "Azure Blob large file ingestion (streaming CSV)",
+      "MCP server for AI agent integration",
+      "Three-layer metering: Redis rate limit + monthly quota + Postgres audit"
+    ]
+  }
+  </script>
+
+  <!-- ── Structured Data — SoftwareApplication (Deliberation) ─────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "PrismRAG Deliberation — Multi-Domain AI Expert Synthesis",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Cloud / API",
+    "url": "https://prismrag.io/#deliberation",
+    "description": "Three-phase AI deliberation pipeline: Horizontal domain discovery (LLM + knowledge base) → Parallel vertical expert queries per domain → Master Deliberator synthesis with agreement/conflict detection. Backed by scientific evidence from Mixture of Agents research (Together AI, 2024) and AI Safety via Debate (Irving et al., 2018).",
+    "offers": [
+      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "5 deliberations/month" },
+      { "@type": "Offer", "name": "Starter", "price": "29", "priceCurrency": "USD", "billingIncrement": "month", "description": "50 deliberations/month" },
+      { "@type": "Offer", "name": "Professional", "price": "99", "priceCurrency": "USD", "billingIncrement": "month", "description": "500 deliberations/month" },
+      { "@type": "Offer", "name": "Enterprise", "price": "0", "priceCurrency": "USD", "description": "Unlimited deliberations, custom pricing" }
+    ],
+    "featureList": [
+      "Automatic horizontal domain discovery via LLM + knowledge base",
+      "Parallel vertical expert queries (up to 10 domains simultaneously)",
+      "Master Deliberator synthesis with agreement and conflict detection",
+      "Knowledge base grounding per domain (when PrismRAG workspace connected)",
+      "Follow-up questions on completed sessions (no quota consumed)",
+      "Async polling mode for long-running deliberations",
+      "MCP tools: deliberate, get_deliberation_session, deliberation_followup",
+      "REST API with full session lifecycle management"
+    ]
+  }
+  </script>
+
+  <!-- ── Structured Data — FAQ ─────────────────────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is PrismRAG and how is it different from Graph RAG?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Standard Graph RAG derives relationships from document co-occurrence statistics — the documents decide which concepts are related. PrismRAG inverts this: you define a mapping (categories + word rules), and all data is embedded into your model of the world. This gives every client a completely different knowledge graph from the same documents, with full audit traceability from mapping rule to retrieval result."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What ML algorithms does PrismRAG use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "PrismRAG uses four core ML components: (1) Gemini text-embedding-004 for 768-dimensional semantic embeddings; (2) Tier-1 RulesStrategy: deterministic 768→256-d linear projection with 30% category one-hot signal + 70% random orthonormal projection, L2-normalised; (3) Tier-2 MLPStrategy: a 3-layer PyTorch MLP (768→512→512→256) trained with InfoNCE contrastive loss plus anchor repulsion, using AdamW + CosineAnnealingLR; (4) Louvain community detection on the word graph, with parallel Gemini LLM labeling of each community."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the Deliberation product and how does it work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Deliberation is a three-phase AI reasoning pipeline for complex questions that span multiple domains. Phase 1 (Horizontal): LLM + knowledge base community search discovers the top 7 most relevant domains. Phase 2 (Vertical): all 7 domains are queried in parallel as domain experts, each getting a targeted deep prompt with optional KB grounding. Phase 3 (Synthesis): a Master Deliberator compares all findings, identifies agreements, surfaces conflicts between domain logic, flags unique insights, and produces a final synthesised answer. Unlike single-model RAG, genuine conflicts emerge from independent domain reasoning."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does PrismRAG support MCP (Model Context Protocol) for AI agents?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. PrismRAG ships a built-in MCP server exposing 9 tools: search, list_workspaces, list_communities, get_job_status, submit_job, create_bridge, deliberate, get_deliberation_session, and deliberation_followup. AI assistants like Claude, ChatGPT, and custom agents can connect via stdio or HTTP transport."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is pricing structured?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "PrismRAG (knowledge graph): Free $0 (5,000 chunks), Starter $49/mo (50,000 chunks), Professional $199/mo (500,000 chunks + MLP training + bridge vectors), Enterprise custom. Deliberation: Free $0 (5 deliberations), Starter $29/mo (50 deliberations), Professional $99/mo (500 deliberations), Enterprise custom. Overage: $0.25 per deliberation. Both products are available together on all paid plans."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/landing.css"/>
+
+  <style>
+    /* ── Deliberation section additions ── */
+    .product-switcher { display:flex; gap:12px; justify-content:center; margin-bottom:48px; }
+    .product-tab { padding:10px 28px; border-radius:100px; font-weight:600; font-size:14px; cursor:pointer; border:1.5px solid var(--border,#2a2a3a); color:var(--muted,#888); background:transparent; transition:all .2s; }
+    .product-tab.active { background:var(--accent,#6c63ff); color:#fff; border-color:transparent; }
+
+    .delib-section { padding:96px 0; background:linear-gradient(180deg,#0a0a12 0%,#0d0b1a 100%); }
+    .pipeline-visual { display:flex; align-items:stretch; gap:0; margin:48px 0; overflow-x:auto; }
+    .pipeline-phase { flex:1; min-width:200px; background:rgba(108,99,255,.07); border:1px solid rgba(108,99,255,.18); border-radius:12px; padding:24px 20px; position:relative; }
+    .pipeline-phase + .pipeline-phase { margin-left:0; }
+    .pipeline-arrow { display:flex; align-items:center; color:rgba(108,99,255,.5); font-size:22px; padding:0 8px; flex-shrink:0; }
+    .phase-num { font-size:11px; font-weight:700; letter-spacing:.12em; color:rgba(108,99,255,.7); text-transform:uppercase; margin-bottom:8px; }
+    .phase-name { font-size:16px; font-weight:700; color:#e8e8f0; margin-bottom:10px; }
+    .phase-detail { font-size:13px; color:#888; line-height:1.6; }
+    .phase-tag { display:inline-block; margin-top:12px; font-size:11px; font-weight:600; padding:3px 10px; border-radius:100px; background:rgba(108,99,255,.15); color:rgba(108,99,255,.9); }
+
+    .delib-compare { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:40px; }
+    @media(max-width:700px){ .delib-compare{grid-template-columns:1fr;} }
+    .delib-compare-card { padding:28px; border-radius:12px; }
+    .delib-compare-card.bad  { background:rgba(255,80,80,.05); border:1px solid rgba(255,80,80,.15); }
+    .delib-compare-card.good { background:rgba(50,205,120,.05); border:1px solid rgba(50,205,120,.2); }
+    .delib-compare-card h4 { font-size:15px; font-weight:700; margin:0 0 14px; }
+    .delib-compare-card.bad h4 { color:#ff6060; }
+    .delib-compare-card.good h4 { color:#32cd78; }
+    .delib-compare-card p { font-size:13px; color:#888; line-height:1.7; margin:0; }
+
+    .ml-section { padding:80px 0; background:#07070f; }
+    .ml-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; margin-top:40px; }
+    .ml-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:12px; padding:24px; }
+    .ml-card-api { font-size:11px; font-weight:700; letter-spacing:.1em; color:#6c63ff; text-transform:uppercase; margin-bottom:8px; }
+    .ml-card h4 { font-size:15px; font-weight:700; color:#e8e8f0; margin:0 0 10px; }
+    .ml-card p { font-size:13px; color:#777; line-height:1.65; margin:0; }
+    .ml-pill { display:inline-block; margin:4px 4px 0 0; font-size:11px; padding:2px 8px; border-radius:100px; background:rgba(108,99,255,.12); color:rgba(200,196,255,.8); }
+
+    .delib-pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; margin-top:40px; }
+    .delib-pricing-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:28px 22px; }
+    .delib-pricing-card.highlight { border-color:rgba(108,99,255,.5); background:rgba(108,99,255,.08); }
+    .dp-plan { font-size:13px; font-weight:700; color:#aaa; text-transform:uppercase; letter-spacing:.08em; margin-bottom:12px; }
+    .dp-price { font-size:28px; font-weight:800; color:#e8e8f0; margin-bottom:4px; }
+    .dp-price span { font-size:14px; font-weight:400; color:#666; }
+    .dp-delibs { font-size:14px; color:#6c63ff; font-weight:600; margin-bottom:16px; }
+    .dp-features { list-style:none; margin:0; padding:0; }
+    .dp-features li { font-size:13px; color:#888; padding:4px 0; }
+    .dp-features li::before { content:"✓ "; color:#6c63ff; font-weight:700; }
+    .dp-btn { display:block; margin-top:20px; text-align:center; padding:10px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; border:1.5px solid rgba(108,99,255,.4); color:rgba(108,99,255,.9); transition:all .2s; }
+    .dp-btn:hover { background:rgba(108,99,255,.15); }
+    .dp-btn.primary { background:#6c63ff; color:#fff; border-color:#6c63ff; }
+    .dp-btn.primary:hover { background:#5a52e0; }
+
+    .mcp-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(50,205,120,.1); border:1px solid rgba(50,205,120,.25); border-radius:100px; padding:4px 14px; font-size:12px; font-weight:600; color:#32cd78; margin-bottom:16px; }
+    .use-case-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top:32px; }
+    .use-case-card { background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:20px; }
+    .use-case-card .uc-icon { font-size:24px; margin-bottom:10px; }
+    .use-case-card h4 { font-size:14px; font-weight:700; color:#e0e0f0; margin:0 0 6px; }
+    .use-case-card p { font-size:12px; color:#777; margin:0; line-height:1.6; }
+    .uc-savings { font-size:11px; font-weight:700; color:#6c63ff; margin-top:8px; }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────────────── -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="/" class="logo">
+      <span class="logo-prism">⬡</span>
+      <span class="logo-text">PrismRAG</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#products">Products</a></li>
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#ml-engine">AI / ML</a></li>
+      <li><a href="#deliberation">Deliberation</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="/docs" target="_blank">Docs</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="/login.html" class="btn-ghost">Sign in</a>
+      <a href="/register.html" class="btn-primary">Start free</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-grid"></div>
+    <div class="prism-glow"></div>
+  </div>
+  <div class="container">
+    <div class="hero-badge">Two enterprise AI products — one platform</div>
+    <h1 class="hero-h1">
+      Your data.<br/>
+      <span class="gradient-text">Your intelligence.</span>
+    </h1>
+    <p class="hero-sub">
+      <strong>PrismRAG</strong> — define your own knowledge graph. Your rules, your categories, your semantic model.<br/>
+      <strong>Deliberation</strong> — get 7 AI domain experts to debate your hardest questions, then synthesise them.
+    </p>
+    <div class="hero-actions">
+      <a href="/register.html" class="btn-hero-primary">
+        Start building free
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#products" class="btn-hero-ghost">See the products</a>
+    </div>
+    <div class="hero-code-block">
+      <div class="code-tabs">
+        <span class="code-tab active">Knowledge Graph</span>
+        <span class="code-tab">Deliberation</span>
+      </div>
+      <pre class="code-snippet"><span class="c-comment"># Define your mapping — PrismRAG embeds everything into it</span>
+<span class="c-keyword">POST</span> /api/prismrag/jobs
+
+{
+  <span class="c-key">"strategy"</span>: <span class="c-str">"mlp"</span>,           <span class="c-comment">// Tier-2: trains your personal PyTorch MLP</span>
+  <span class="c-key">"mapping"</span>: {
+    <span class="c-key">"categories"</span>: [
+      { <span class="c-key">"slug"</span>: <span class="c-str">"risk"</span>,   <span class="c-key">"label"</span>: <span class="c-str">"Risk &amp; Compliance"</span> },
+      { <span class="c-key">"slug"</span>: <span class="c-str">"growth"</span>, <span class="c-key">"label"</span>: <span class="c-str">"Growth &amp; Opportunity"</span> }
+    ],
+    <span class="c-key">"rules"</span>: [
+      { <span class="c-key">"word"</span>: <span class="c-str">"volatility"</span>, <span class="c-key">"category_slug"</span>: <span class="c-str">"risk"</span> }
+    ]
+  }
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRODUCTS OVERVIEW ─────────────────────────────────────────────────── -->
+<section class="how-section" id="products" style="padding:80px 0; background:#07070f;">
+  <div class="container">
+    <div class="section-label">Two Products</div>
+    <h2 class="section-h2">Enterprise AI built on your knowledge, not the internet's</h2>
+    <p class="section-sub">Both products are available in the same plan. Use one, or combine them for a full enterprise knowledge + reasoning platform.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:40px;" class="products-overview-grid">
+      <div class="feature-card" style="border-color:rgba(108,99,255,.3);padding:36px 28px;">
+        <div style="font-size:32px;margin-bottom:16px;">⬡</div>
+        <h3 style="font-size:20px;margin-bottom:12px;">PrismRAG</h3>
+        <p style="margin-bottom:16px;">Enterprise semantic re-mapping engine. You define which words belong to which categories. A personal PyTorch MLP learns your boundaries and generalises them to new vocabulary. Graph RAG retrieval runs on your graph, not a statistical one.</p>
+        <div style="margin-top:16px;font-size:13px;color:#6c63ff;font-weight:600;">Knowledge graph · Vector search · MLP training</div>
+        <a href="#how-it-works" style="display:inline-block;margin-top:20px;font-size:13px;color:#aaa;text-decoration:underline;">How it works →</a>
+      </div>
+      <div class="feature-card" style="border-color:rgba(50,205,120,.25);padding:36px 28px;">
+        <div style="font-size:32px;margin-bottom:16px;">◈</div>
+        <h3 style="font-size:20px;margin-bottom:12px;">Deliberation</h3>
+        <p style="margin-bottom:16px;">Multi-domain AI deliberation for complex questions. The system automatically discovers 7 relevant domains, runs parallel expert queries in each, and synthesises agreements, conflicts, and unique insights. Like hiring 7 consultants and an arbiter, in 20 seconds, for $0.25.</p>
+        <div style="margin-top:16px;font-size:13px;color:#32cd78;font-weight:600;">Domain discovery · Expert synthesis · Conflict detection</div>
+        <a href="#deliberation" style="display:inline-block;margin-top:20px;font-size:13px;color:#aaa;text-decoration:underline;">See the pipeline →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PROBLEM / SOLUTION ────────────────────────────────────────────────── -->
+<section class="problem-section" id="problem">
+  <div class="container">
+    <div class="section-label">The Graph RAG Problem</div>
+    <h2 class="section-h2">Who should control your knowledge graph?</h2>
+    <p class="section-sub">Standard Graph RAG derives relationships from document co-occurrence. The corpus decides who connects to who — not your team.</p>
+
+    <div class="compare-grid">
+      <div class="compare-card bad">
+        <div class="compare-header">
+          <span class="compare-icon bad">✗</span>
+          <span class="compare-title">Standard Graph RAG</span>
+        </div>
+        <ul class="compare-list">
+          <li>Relationships extracted from document statistics</li>
+          <li>"bank" near "river bank" in old docs → wrong cluster for finance</li>
+          <li>Different clients get structurally the same graph</li>
+          <li>Wrong edge? Re-index all documents</li>
+          <li>LLM hallucinations baked permanently into graph</li>
+          <li>Black-box community assignments — not auditable</li>
+        </ul>
+        <div class="compare-arrow">Data → Relationships</div>
+      </div>
+      <div class="compare-card good">
+        <div class="compare-header">
+          <span class="compare-icon good">✓</span>
+          <span class="compare-title">PrismRAG</span>
+        </div>
+        <ul class="compare-list">
+          <li>You define which words belong to which community</li>
+          <li>"bank" → finance cluster because <em>your mapping says so</em></li>
+          <li>Per-client isolation — same docs, different graphs</li>
+          <li>Wrong edge? Update one rule row, re-run job</li>
+          <li>Every assignment traces to a versioned rule</li>
+          <li>Full audit trail from mapping rule → chunk → retrieval</li>
+        </ul>
+        <div class="compare-arrow good">Mapping → Data embedded into it</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ──────────────────────────────────────────────────────── -->
+<section class="how-section" id="how-it-works">
+  <div class="container">
+    <div class="section-label">How PrismRAG Works</div>
+    <h2 class="section-h2">Three steps from input to intelligent retrieval</h2>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">01</div>
+        <div class="step-icon">⬡</div>
+        <h3>Define your mapping</h3>
+        <p>Send a category table and word→group rules via API, CSV, SQL query, or Excel file. This is your domain model — explicit, versioned, and auditable.</p>
+        <div class="step-tag">Tier 1 · Rules</div>
+      </div>
+      <div class="step-connector">→</div>
+      <div class="step-card">
+        <div class="step-number">02</div>
+        <div class="step-icon">◈</div>
+        <h3>We re-map the space</h3>
+        <p>Your rules train a personal MLP (Tier 2) that learns the boundaries of your categories and generalises them to unseen vocabulary. All source text is projected through your model.</p>
+        <div class="step-tag">Tier 2 · MLP Training</div>
+      </div>
+      <div class="step-connector">→</div>
+      <div class="step-card">
+        <div class="step-number">03</div>
+        <div class="step-icon">◎</div>
+        <h3>Retrieval reflects your intent</h3>
+        <p>Queries traverse your community graph, not a statistical one. Graph RAG finds what you defined as related — not what happened to co-occur in training data.</p>
+        <div class="step-tag">Graph RAG · HNSW</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ML ENGINE ─────────────────────────────────────────────────────────── -->
+<section class="ml-section" id="ml-engine">
+  <div class="container">
+    <div class="section-label">Under the Hood</div>
+    <h2 class="section-h2">Enterprise ML, not a prompt wrapper</h2>
+    <p class="section-sub">Every API call is backed by a multi-layer machine learning stack. Here's exactly what runs and when.</p>
+
+    <div class="ml-grid">
+      <div class="ml-card">
+        <div class="ml-card-api">All ingestion APIs</div>
+        <h4>Gemini text-embedding-004</h4>
+        <p>Every word and chunk is embedded into 768-dimensional semantic space using Google's Gemini embedding model, with DB caching so repeated words don't re-call the API.</p>
+        <div>
+          <span class="ml-pill">768-d vectors</span>
+          <span class="ml-pill">DB cache</span>
+          <span class="ml-pill">Batch calls</span>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-api">strategy: "rules" (Tier 1)</div>
+        <h4>Linear Projection + Category Signal</h4>
+        <p>768-d Gemini vectors are projected to 256-d via a seeded random orthonormal matrix (preserves cosine distances). A 30% category one-hot signal is blended in to pull same-category words together before MLP training. L2-normalised to unit sphere. Fully deterministic and auditable.</p>
+        <div>
+          <span class="ml-pill">768→256-d</span>
+          <span class="ml-pill">30/70 blend</span>
+          <span class="ml-pill">L2 normalise</span>
+          <span class="ml-pill">QR orthonormal</span>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-api">strategy: "mlp" (Tier 2)</div>
+        <h4>Personal PyTorch MLP</h4>
+        <p>A 3-layer MLP (768→512→512→256) is trained on your word rules using InfoNCE contrastive loss (τ=0.20) plus anchor repulsion (weight=0.35). This learns the decision boundaries between your categories and generalises them to vocabulary not in your rule set. AdamW optimiser, CosineAnnealingLR schedule, gradient clipping at 1.0.</p>
+        <div>
+          <span class="ml-pill">PyTorch</span>
+          <span class="ml-pill">InfoNCE loss</span>
+          <span class="ml-pill">Anchor repulsion</span>
+          <span class="ml-pill">AdamW</span>
+          <span class="ml-pill">Cosine LR</span>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-api">After every ingestion job</div>
+        <h4>Louvain Community Detection</h4>
+        <p>A word co-occurrence graph is built from ingested chunks, then Louvain modularity optimisation groups words into communities. Each community centroid is computed, stored as a pgvector VECTOR(256), and labelled in parallel using Gemini LLM calls.</p>
+        <div>
+          <span class="ml-pill">python-louvain</span>
+          <span class="ml-pill">NetworkX</span>
+          <span class="ml-pill">Parallel LLM labelling</span>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-api">POST /api/prismrag/search</div>
+        <h4>Graph RAG Retrieval Pipeline</h4>
+        <p>Three-phase retrieval: (1) HNSW cosine search on community centroids to find the closest community to the query. (2) BFS 2-hop expansion on the word graph to find related words. (3) MLP re-ranking: if a Tier-2 model exists, all candidates are re-projected through the personal MLP before final cosine ranking.</p>
+        <div>
+          <span class="ml-pill">HNSW m=16</span>
+          <span class="ml-pill">BFS 2-hop</span>
+          <span class="ml-pill">MLP re-rank</span>
+          <span class="ml-pill">pgvector</span>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-api">POST /api/prismrag/bridges</div>
+        <h4>Bridge Vector Synthesis</h4>
+        <p>Cross-community semantic bridges are created by computing the normalised midpoint between two community centroids: normalize((centroid_A + centroid_B) / 2). The bridge vector is then projected through the personal MLP (if Tier 2), creating a synthetic node that connects two previously separate semantic clusters without retraining.</p>
+        <div>
+          <span class="ml-pill">Centroid midpoint</span>
+          <span class="ml-pill">MLP projection</span>
+          <span class="ml-pill">No retraining</span>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-api">POST /api/deliberation/sessions</div>
+        <h4>Multi-Agent Deliberation (LLM ensemble)</h4>
+        <p>The Deliberation pipeline runs a structured ensemble of Gemini LLM calls: one horizontal domain discovery call, up to 10 parallel vertical expert calls (each with domain-specific prompt engineering), and one Master Deliberator synthesis call. Based on the Mixture of Agents (MoA) technique — diverse independent reasoning outperforms a single call on complex questions.</p>
+        <div>
+          <span class="ml-pill">LLM ensemble</span>
+          <span class="ml-pill">Parallel inference</span>
+          <span class="ml-pill">Conflict detection</span>
+          <span class="ml-pill">MoA technique</span>
+        </div>
+      </div>
+
+      <div class="ml-card">
+        <div class="ml-card-api">Every API endpoint</div>
+        <h4>Three-Layer Metering</h4>
+        <p>Usage is enforced and tracked at three levels: Redis sliding window for per-minute rate limiting (&lt;1ms), Redis monthly counter for quota tracking (Postgres fallback), and async Postgres writes for usage_event audit log. Zero DB latency added to the request path.</p>
+        <div>
+          <span class="ml-pill">Redis sliding window</span>
+          <span class="ml-pill">Monthly quota</span>
+          <span class="ml-pill">Async audit log</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── DELIBERATION PRODUCT ───────────────────────────────────────────────── -->
+<section class="delib-section" id="deliberation">
+  <div class="container">
+    <div class="section-label" style="color:#32cd78;">New Product</div>
+    <div class="mcp-badge">MCP-native · API-first · KB-grounded</div>
+    <h2 class="section-h2">Deliberation</h2>
+    <p class="section-sub">
+      Complex questions span multiple domains. Standard LLMs answer with one perspective.<br/>
+      Deliberation runs <strong>7 domain experts in parallel</strong>, then synthesises what they agree on, where they conflict, and what each uniquely noticed.
+    </p>
+
+    <!-- Pipeline visual -->
+    <div class="pipeline-visual">
+      <div class="pipeline-phase">
+        <div class="phase-num">Phase 1</div>
+        <div class="phase-name">Horizontal Discovery</div>
+        <div class="phase-detail">LLM + your knowledge base community search surfaces the top 7 most relevant domains for the question. Domains from both sources get a 15% score boost (source="hybrid").</div>
+        <span class="phase-tag">~2–5 seconds</span>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-phase">
+        <div class="phase-num">Phase 2</div>
+        <div class="phase-name">Vertical Expert Queries</div>
+        <div class="phase-detail">All 7 domains are queried in parallel. Each domain gets a targeted deep prompt as a domain specialist, with optional KB search injecting your organisation's documents per domain.</div>
+        <span class="phase-tag">~8–20 seconds</span>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-phase">
+        <div class="phase-num">Phase 3</div>
+        <div class="phase-name">Master Deliberator</div>
+        <div class="phase-detail">A Master Deliberator compares all domain findings. Surfaces agreements, flags genuine conflicts between domain logic, extracts unique insights, and synthesises a final weighted answer.</div>
+        <span class="phase-tag">~5–12 seconds</span>
+      </div>
+    </div>
+
+    <!-- Why it's better -->
+    <div class="delib-compare">
+      <div class="delib-compare-card bad">
+        <h4>✗ Standard single-model RAG</h4>
+        <p>The same model generates both sides of "on one hand… on the other hand…" — so it tends toward vague consensus. All domains compete for the same attention budget. There's no real conflict detection because the model doesn't want to contradict itself. You can't see which domain contributed what.</p>
+      </div>
+      <div class="delib-compare-card good">
+        <h4>✓ PrismRAG Deliberation</h4>
+        <p>Finance, Antitrust, and HR each reason independently before any synthesis. Real conflicts emerge from domain logic differences, not hedging. The Master Deliberator can say "Finance says go, Antitrust assigns 40% block probability" — a genuine disagreement from independent reasoning. Every domain's contribution is visible and auditable.</p>
+      </div>
+    </div>
+
+    <!-- Use cases -->
+    <div class="section-label" style="margin-top:64px;">Who uses Deliberation</div>
+    <h3 style="font-size:24px;font-weight:700;color:#e8e8f0;margin-bottom:8px;">Real questions that need real multi-domain answers</h3>
+    <div class="use-case-grid">
+      <div class="use-case-card">
+        <div class="uc-icon">⚖️</div>
+        <h4>M&amp;A Analysis</h4>
+        <p>Finance, Antitrust, HR, Technology Integration, Market Strategy, Regulatory, and Culture domains each weigh in — then conflicts are surfaced.</p>
+        <div class="uc-savings">Replaces $50K–$500K consulting engagement</div>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">🏥</div>
+        <h4>Medical Differential</h4>
+        <p>Cardiology, Neurology, Endocrinology, and Psychiatry all examine the same symptom set independently before synthesis.</p>
+        <div class="uc-savings">Replaces $500–$3,000 specialist consultation</div>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">📋</div>
+        <h4>Regulatory Compliance</h4>
+        <p>GDPR, CCPA, common law, and sector regulations examined in parallel. Conflicts between frameworks are explicitly surfaced.</p>
+        <div class="uc-savings">Replaces $2,000–$10,000 legal research memo</div>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">🌏</div>
+        <h4>Market Entry Strategy</h4>
+        <p>Market Entry, Regulatory, Cultural, Supply Chain, Competitive, Financial, and Political Risk — all examined automatically.</p>
+        <div class="uc-savings">Replaces $50,000–$200,000 market research report</div>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">🛡️</div>
+        <h4>Insurance Risk Assessment</h4>
+        <p>Actuarial, Legal, Environmental, Behavioral, and Operational domains assess the same risk from different expert angles.</p>
+        <div class="uc-savings">Replaces $5,000–$50,000 risk assessment</div>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">🤖</div>
+        <h4>AI Agent Reasoning</h4>
+        <p>Connect via MCP. Your Claude/ChatGPT agent calls <code>deliberate(question)</code> and gets a full multi-domain synthesis automatically.</p>
+        <div class="uc-savings">MCP-native: no custom orchestration needed</div>
+      </div>
+    </div>
+
+    <!-- MCP code example -->
+    <div style="margin-top:56px;">
+      <div class="section-label">MCP Integration</div>
+      <h3 style="font-size:20px;font-weight:700;color:#e8e8f0;margin-bottom:16px;">AI agents can deliberate in one tool call</h3>
+      <div class="hero-code-block" style="max-width:700px;">
+        <pre class="code-snippet"><span class="c-comment"># Claude Desktop / any MCP-compatible AI agent</span>
+<span class="c-comment"># Just one tool call — the full 3-phase pipeline runs automatically</span>
+
+<span class="c-keyword">deliberate</span>({
+  <span class="c-key">"question"</span>:     <span class="c-str">"Should we acquire CompetitorX in Q4?"</span>,
+  <span class="c-key">"domain_count"</span>: 7,
+  <span class="c-key">"tenant_id"</span>:    <span class="c-str">"your-prismrag-workspace"</span>  <span class="c-comment">// optional KB grounding</span>
+})
+
+<span class="c-comment">// Returns:</span>
+{
+  <span class="c-key">"agreements"</span>:      <span class="c-str">"Finance &amp; Strategy both see 12–18% synergy..."</span>,
+  <span class="c-key">"conflicts"</span>:       <span class="c-str">"Finance: 70% deal probability. Antitrust: 40%."</span>,
+  <span class="c-key">"unique_insights"</span>: <span class="c-str">"HR flagged culture clash not in financial models"</span>,
+  <span class="c-key">"final_answer"</span>:    <span class="c-str">"Strong strategic fit, material regulatory risk..."</span>,
+  <span class="c-key">"confidence"</span>:      0.81
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ──────────────────────────────────────────────────────────── -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-label">PrismRAG Features</div>
+    <h2 class="section-h2">Enterprise-grade from day one</h2>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon teal">⬡</div>
+        <h3>Any input source</h3>
+        <p>SQL query, Excel upload, REST API, or existing pgvector chunk store. One job API handles all of them.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">◈</div>
+        <h3>Tier 1 + Tier 2</h3>
+        <p>Start with explicit rules (fully auditable). Upgrade to MLP training that generalises your rules to new vocabulary without rewriting them.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon blue">◎</div>
+        <h3>HNSW vector indexes</h3>
+        <p>Every vector table ships with HNSW indexes (m=16, ef_construction=64). Millisecond cosine search across millions of chunks — not sequential scans.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon indigo">⬡</div>
+        <h3>Bridge vectors</h3>
+        <p>Connect two existing communities post-hoc with a synthetic bridge node — no retraining required. Instantly links semantic clusters across domains.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon pink">◈</div>
+        <h3>Per-client isolation</h3>
+        <p>Every tenant gets their own vector space, their own community graph, their own MLP model weights. Complete data isolation by design.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon orange">◎</div>
+        <h3>Full audit trail</h3>
+        <p>Every retrieval decision traces back to a versioned mapping rule. Regulators can ask "why did this document appear?" and get a real answer.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon teal">⬡</div>
+        <h3>Async large file ingestion</h3>
+        <p>Files under 1MB run inline. Up to 500MB upload directly to Azure Blob, queue via Service Bus, processed streaming row-by-row — never held in memory.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon purple">◈</div>
+        <h3>MCP server built in</h3>
+        <p>9 MCP tools out of the box: search, submit_job, create_bridge, deliberate, and more. Connect any Claude, ChatGPT, or custom AI agent in minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ───────────────────────────────────────────────────────────── -->
+<section class="pricing-section" id="pricing">
+  <div class="container">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-h2">Simple, transparent pricing</h2>
+    <p class="section-sub">Both products included in every plan. Start free — no credit card required.</p>
+
+    <!-- PrismRAG pricing -->
+    <h3 style="font-size:18px;font-weight:700;color:#6c63ff;margin-bottom:24px;margin-top:0;">⬡ PrismRAG — Knowledge Graph</h3>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price"><span class="price-amount">$0</span><span class="price-period">/month</span></div>
+        <p class="plan-desc">Try PrismRAG with no commitment</p>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> 5,000 chunks / month</li>
+          <li><span class="check">✓</span> 1 workspace</li>
+          <li><span class="check">✓</span> CSV / Excel ingestion</li>
+          <li><span class="check">✓</span> Graph RAG retrieval</li>
+          <li><span class="check dim">–</span> Tier-2 MLP training</li>
+          <li><span class="check dim">–</span> Bridge vectors</li>
+          <li><span class="check dim">–</span> SQL / API ingestion</li>
+        </ul>
+        <a href="/register.html" class="plan-btn ghost">Start free</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price"><span class="price-amount">$49</span><span class="price-period">/month</span></div>
+        <p class="plan-desc">For teams building their first pipeline</p>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> 50,000 chunks / month</li>
+          <li><span class="check">✓</span> 1 workspace · 3 mappings</li>
+          <li><span class="check">✓</span> CSV / Excel / API ingestion</li>
+          <li><span class="check">✓</span> Graph RAG retrieval</li>
+          <li><span class="check dim">–</span> Tier-2 MLP training</li>
+          <li><span class="check dim">–</span> Bridge vectors</li>
+          <li><span class="check">✓</span> Email support</li>
+        </ul>
+        <a href="/register.html?plan=starter" class="plan-btn ghost">Get started</a>
+      </div>
+
+      <div class="pricing-card popular">
+        <div class="popular-badge">Most popular</div>
+        <div class="plan-name">Professional</div>
+        <div class="plan-price"><span class="price-amount">$199</span><span class="price-period">/month</span></div>
+        <p class="plan-desc">Full ML stack for production deployments</p>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> 500,000 chunks / month</li>
+          <li><span class="check">✓</span> 10 workspaces · 20 mappings</li>
+          <li><span class="check">✓</span> All ingestion sources</li>
+          <li><span class="check">✓</span> Tier-2 MLP training</li>
+          <li><span class="check">✓</span> Graph RAG + Bridge vectors</li>
+          <li><span class="check">✓</span> Webhook callbacks</li>
+          <li><span class="check">✓</span> Priority support</li>
+        </ul>
+        <a href="/register.html?plan=professional" class="plan-btn primary">Start Professional</a>
+      </div>
+
+      <div class="pricing-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price"><span class="price-amount">Custom</span></div>
+        <p class="plan-desc">Unlimited scale, dedicated infrastructure</p>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Unlimited chunks</li>
+          <li><span class="check">✓</span> Unlimited workspaces</li>
+          <li><span class="check">✓</span> All features + custom model training</li>
+          <li><span class="check">✓</span> Dedicated infrastructure</li>
+          <li><span class="check">✓</span> 99.9% SLA</li>
+          <li><span class="check">✓</span> Dedicated support engineer</li>
+        </ul>
+        <a href="mailto:sales@prismrag.io?subject=Enterprise%20Inquiry" class="plan-btn ghost">Contact sales</a>
+      </div>
+    </div>
+
+    <!-- Deliberation pricing -->
+    <h3 style="font-size:18px;font-weight:700;color:#32cd78;margin-bottom:24px;margin-top:64px;">◈ Deliberation — Multi-Domain AI Synthesis</h3>
+    <p style="color:#777;font-size:14px;margin-bottom:32px;margin-top:-16px;">Included with every PrismRAG plan. Deliberation credits are separate from chunk limits.</p>
+    <div class="delib-pricing-grid">
+      <div class="delib-pricing-card">
+        <div class="dp-plan">Free</div>
+        <div class="dp-price">$0<span>/month</span></div>
+        <div class="dp-delibs">5 deliberations / month</div>
+        <ul class="dp-features">
+          <li>Up to 7 domains per session</li>
+          <li>Sync + async mode</li>
+          <li>Follow-up questions (free)</li>
+          <li>REST API access</li>
+        </ul>
+        <a href="/register.html" class="dp-btn">Start free</a>
+      </div>
+
+      <div class="delib-pricing-card">
+        <div class="dp-plan">Starter</div>
+        <div class="dp-price">$29<span>/month</span></div>
+        <div class="dp-delibs">50 deliberations / month</div>
+        <ul class="dp-features">
+          <li>Up to 7 domains per session</li>
+          <li>Sync + async mode</li>
+          <li>Follow-up questions (free)</li>
+          <li>$0.25 per overage deliberation</li>
+        </ul>
+        <a href="/register.html?plan=starter" class="dp-btn">Get started</a>
+      </div>
+
+      <div class="delib-pricing-card highlight">
+        <div class="dp-plan">Professional</div>
+        <div class="dp-price">$99<span>/month</span></div>
+        <div class="dp-delibs">500 deliberations / month</div>
+        <ul class="dp-features">
+          <li>Up to 10 domains per session</li>
+          <li>KB-grounded per domain</li>
+          <li>MCP tools included</li>
+          <li>$0.25 per overage deliberation</li>
+        </ul>
+        <a href="/register.html?plan=professional" class="dp-btn primary">Start Professional</a>
+      </div>
+
+      <div class="delib-pricing-card">
+        <div class="dp-plan">Enterprise</div>
+        <div class="dp-price">Custom</div>
+        <div class="dp-delibs">Unlimited deliberations</div>
+        <ul class="dp-features">
+          <li>Unlimited domains</li>
+          <li>Custom domain taxonomy</li>
+          <li>Private MCP endpoint</li>
+          <li>Dedicated support</li>
+        </ul>
+        <a href="mailto:sales@prismrag.io?subject=Deliberation%20Enterprise" class="dp-btn">Contact sales</a>
+      </div>
+    </div>
+
+    <!-- Bundle note -->
+    <div style="margin-top:40px;padding:24px 28px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);border-radius:12px;display:flex;gap:16px;align-items:center;">
+      <div style="font-size:28px;">💡</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#e8e8f0;margin-bottom:4px;">Bundle both products</div>
+        <div style="font-size:13px;color:#888;">Professional PrismRAG ($199/mo) + Professional Deliberation ($99/mo) = <strong style="color:#6c63ff;">$298/mo</strong> for the full enterprise knowledge + reasoning platform. Contact sales for bundle discounts on annual plans.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ───────────────────────────────────────────────────────────────── -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-inner">
+      <div class="cta-prism">⬡</div>
+      <h2>Ready to own your knowledge graph?</h2>
+      <p>Start with 5,000 free chunks and 5 free deliberations — no credit card required.</p>
+      <div class="cta-actions">
+        <a href="/register.html" class="btn-hero-primary">Start building free</a>
+        <a href="mailto:sales@prismrag.io" class="btn-hero-ghost">Talk to sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ────────────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="/" class="logo">
+          <span class="logo-prism">⬡</span>
+          <span class="logo-text">PrismRAG</span>
+        </a>
+        <p>Enterprise semantic re-mapping and multi-domain AI deliberation. Your mapping, your vectors, your knowledge graph.</p>
+        <p class="footer-tagline">Powered by <a href="https://insightits.com" target="_blank">Insight IT Solutions</a></p>
+      </div>
+      <div class="footer-col">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="#how-it-works">PrismRAG — Knowledge Graph</a></li>
+          <li><a href="#deliberation">Deliberation — Expert Synthesis</a></li>
+          <li><a href="#ml-engine">ML Engine</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/docs">API Reference</a></li>
+          <li><a href="/docs#quickstart">Quickstart</a></li>
+          <li><a href="/docs#mcp">MCP Setup</a></li>
+          <li><a href="https://github.com/insightits/prismrag" target="_blank">GitHub</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="mailto:hello@prismrag.io">Contact</a></li>
+          <li><a href="mailto:sales@prismrag.io">Sales</a></li>
+          <li><a href="/privacy.html">Privacy</a></li>
+          <li><a href="/terms.html">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 Insight IT Solutions. All rights reserved.</span>
+      <span>PrismRAG™ · Deliberation™</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/static/js/landing.js"></script>
+</body>
+</html>

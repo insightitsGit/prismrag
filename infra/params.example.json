@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location":              { "value": "eastus2" },
+    "acrLoginServer":        { "value": "prismrag.azurecr.io" },
+    "imageTag":              { "value": "latest" },
+
+    "// PHASE FLAGS — change these as you scale": {},
+    "externalDb":            { "value": true },
+    "deployRedis":           { "value": false },
+    "postgresSku":           { "value": "Standard_B2s" },
+
+    "// Phase 1: paste your Neon connection string here": {},
+    "externalDbDsn":         { "value": "postgresql://user:pass@ep-xyz.us-east-2.aws.neon.tech/prismrag?sslmode=require" },
+
+    "// Phase 2+: used when externalDb=false (Azure Postgres)": {},
+    "dbConnectionString":    { "value": "postgresql://prismrag:PASS@prismrag-pg.postgres.database.azure.com/prismrag?sslmode=require" },
+
+    "jwtSecret":             { "value": "CHANGE_ME_64_CHAR_RANDOM" },
+    "geminiApiKey":          { "value": "AIza..." },
+    "stripeSecretKey":       { "value": "sk_live_..." },
+    "stripeWebhookSecret":   { "value": "whsec_..." },
+    "stripePriceStarter":    { "value": "price_starter_id" },
+    "stripePriceProf":       { "value": "price_professional_id" },
+    "stripePriceEnterprise": { "value": "price_enterprise_id" }
+  }
+}

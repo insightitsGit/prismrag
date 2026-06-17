@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign in — PrismRAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/landing.css"/>
+  <link rel="stylesheet" href="/static/css/auth.css"/>
+</head>
+<body class="auth-body">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <a href="/" class="logo auth-logo">
+        <span class="logo-prism">⬡</span>
+        <span class="logo-text">PrismRAG</span>
+      </a>
+      <h1 class="auth-h1">Welcome back</h1>
+      <p class="auth-sub">Sign in to your workspace</p>
+
+      <div id="error-box" class="auth-error" style="display:none"></div>
+
+      <form id="login-form" class="auth-form" novalidate>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="jane@acme.com" required autofocus/>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Your password" required/>
+        </div>
+        <button type="submit" class="auth-submit" id="submit-btn">Sign in</button>
+      </form>
+
+      <p class="auth-switch">No account yet? <a href="/register.html">Create one free</a></p>
+    </div>
+
+    <div class="auth-side">
+      <div class="auth-side-inner">
+        <div class="auth-quote">
+          <span class="auth-quote-icon">⬡</span>
+          <p>"The first time I saw our documents retrieved in the <em>exact groupings</em> our team uses — not Wikipedia's — I knew this was different."</p>
+          <div class="auth-quote-author">
+            <strong>CTO, Legal Tech Scale-up</strong>
+          </div>
+        </div>
+        <div class="auth-stats">
+          <div class="auth-stat">
+            <span class="stat-num">256-d</span>
+            <span class="stat-label">personal vector space</span>
+          </div>
+          <div class="auth-stat">
+            <span class="stat-num">HNSW</span>
+            <span class="stat-label">enterprise-grade indexes</span>
+          </div>
+          <div class="auth-stat">
+            <span class="stat-num">v2</span>
+            <span class="stat-label">Tier-1 + MLP tiers</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Redirect if already logged in
+    if (localStorage.getItem('prismrag_token')) {
+      window.location.href = '/dashboard.html';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn');
+      const errorBox = document.getElementById('error-box');
+      errorBox.style.display = 'none';
+      btn.textContent = 'Signing in…';
+      btn.disabled = true;
+
+      const fd = new FormData(e.target);
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Login failed');
+
+        localStorage.setItem('prismrag_token', data.token);
+        localStorage.setItem('prismrag_user', JSON.stringify(data));
+
+        const next = new URLSearchParams(window.location.search).get('next') || '/dashboard.html';
+        window.location.href = next;
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+        btn.textContent = 'Sign in';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

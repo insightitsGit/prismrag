@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create account — PrismRAG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/landing.css"/>
+  <link rel="stylesheet" href="/static/css/auth.css"/>
+</head>
+<body class="auth-body">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <a href="/" class="logo auth-logo">
+        <span class="logo-prism">⬡</span>
+        <span class="logo-text">PrismRAG</span>
+      </a>
+      <h1 class="auth-h1">Create your account</h1>
+      <p class="auth-sub">Start with 5,000 free chunks. No credit card required.</p>
+
+      <div id="error-box" class="auth-error" style="display:none"></div>
+
+      <form id="register-form" class="auth-form" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label>Full name</label>
+            <input type="text" name="full_name" placeholder="Jane Smith" required/>
+          </div>
+          <div class="field">
+            <label>Company</label>
+            <input type="text" name="company" placeholder="Acme Corp"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Work email</label>
+          <input type="email" name="email" placeholder="jane@acme.com" required/>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="8+ characters" required minlength="8"/>
+        </div>
+        <button type="submit" class="auth-submit" id="submit-btn">
+          Create account
+        </button>
+      </form>
+
+      <p class="auth-switch">Already have an account? <a href="/login.html">Sign in</a></p>
+      <p class="auth-legal">By creating an account you agree to our <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
+    </div>
+
+    <div class="auth-side">
+      <div class="auth-side-inner">
+        <div class="auth-quote">
+          <span class="auth-quote-icon">⬡</span>
+          <p>"PrismRAG gave us the first knowledge graph that actually reflects how <em>we</em> think about risk — not how Wikipedia does."</p>
+          <div class="auth-quote-author">
+            <strong>Head of AI, Tier-1 Investment Bank</strong>
+          </div>
+        </div>
+        <div class="auth-stats">
+          <div class="auth-stat">
+            <span class="stat-num">10×</span>
+            <span class="stat-label">faster domain adaptation</span>
+          </div>
+          <div class="auth-stat">
+            <span class="stat-num">100%</span>
+            <span class="stat-label">auditable relationships</span>
+          </div>
+          <div class="auth-stat">
+            <span class="stat-num">0</span>
+            <span class="stat-label">re-indexing on mapping change</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const intendedPlan = urlParams.get('plan') || 'free';
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn');
+      const errorBox = document.getElementById('error-box');
+      errorBox.style.display = 'none';
+      btn.textContent = 'Creating account…';
+      btn.disabled = true;
+
+      const fd = new FormData(e.target);
+      const body = {
+        full_name: fd.get('full_name'),
+        company:   fd.get('company'),
+        email:     fd.get('email'),
+        password:  fd.get('password'),
+      };
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Registration failed');
+
+        localStorage.setItem('prismrag_token', data.token);
+        localStorage.setItem('prismrag_user', JSON.stringify(data));
+
+        if (intendedPlan !== 'free') {
+          const billingRes = await fetch('/api/billing/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.token}` },
+            body: JSON.stringify({ plan: intendedPlan }),
+          });
+          const billingData = await billingRes.json();
+          if (billingData.redirect) { window.location.href = billingData.redirect; return; }
+        }
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+        btn.textContent = 'Create account';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
