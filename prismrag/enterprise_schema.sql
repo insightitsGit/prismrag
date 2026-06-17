@@ -87,5 +87,23 @@ CREATE TABLE IF NOT EXISTS prismrag.job_queue (
 CREATE INDEX IF NOT EXISTS ix_job_queue_pending ON prismrag.job_queue (status, created_at)
     WHERE status = 'pending';
 
+-- ── Async search tasks ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS prismrag.search_task (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES prismrag.user_account(id) ON DELETE CASCADE,
+    tenant_id       UUID NOT NULL,
+    request         JSONB NOT NULL,
+    result          JSONB,
+    status          VARCHAR(20) NOT NULL DEFAULT 'pending',
+    error_message   TEXT,
+    latency_ms      INT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    finished_at     TIMESTAMPTZ,
+    CONSTRAINT ck_search_task_status CHECK (status IN ('pending', 'running', 'completed', 'failed'))
+);
+CREATE INDEX IF NOT EXISTS ix_search_task_user ON prismrag.search_task (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_search_task_pending ON prismrag.search_task (status, created_at)
+    WHERE status = 'pending';
+
 -- ── Audit log trace id ────────────────────────────────────────────────────────
 ALTER TABLE prismrag.api_request_log ADD COLUMN IF NOT EXISTS trace_id VARCHAR(64) NOT NULL DEFAULT '';

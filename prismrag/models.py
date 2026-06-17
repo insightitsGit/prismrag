@@ -262,6 +262,30 @@ class SearchRequest(BaseModel):
     query:      str  = Field(..., min_length=1)
     top_k:      int  = Field(10, ge=1, le=100)
     category_filter: str | None = None
+    wait:       bool = Field(
+        False,
+        description="If true, block until results are ready. Default false returns a task_id to poll.",
+    )
+
+
+class SearchTaskSubmitResponse(BaseModel):
+    task_id:    str
+    tenant_id:  str
+    status:     str = "pending"
+    status_url: str
+    async_mode: bool = True
+
+
+class SearchTaskStatusResponse(BaseModel):
+    task_id:       str
+    tenant_id:     str
+    status:        str
+    request:       dict[str, Any] = Field(default_factory=dict)
+    result:        SearchResponse | None = None
+    error_message: str | None = None
+    latency_ms:    int | None = None
+    created_at:    str | None = None
+    finished_at:   str | None = None
 
 
 class SearchHit(BaseModel):

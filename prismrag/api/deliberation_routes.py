@@ -88,7 +88,7 @@ class CreateSessionRequest(BaseModel):
     tenant_id:    str | None = None
     mapping_id:   str | None = None
     domain_count: int   = Field(7, ge=3, le=10)
-    async_mode:   bool  = False   # True = fire-and-forget, poll for results
+    async_mode:   bool  = True    # True = return immediately, poll for results (default)
 
 
 class FollowupRequest(BaseModel):
@@ -122,10 +122,10 @@ async def create_and_run_session(
     """
     Create a deliberation session and immediately start the pipeline.
 
-    Sync (async_mode=false, default for ≤ simple questions):
+    Sync (async_mode=false):
       Returns the full result when done. Typically 15–40 seconds.
 
-    Async (async_mode=true):
+    Async (async_mode=true, default):
       Returns immediately with session_id and status=discovering.
       Poll GET /api/deliberation/sessions/{session_id} for completion.
     """

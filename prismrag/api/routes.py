@@ -1,24 +1,31 @@
 """PrismRAG — FastAPI routes."""
 from __future__ import annotations
 
+import asyncio
 import logging
-import os
+import time
 import uuid
-from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 
 from prismrag.models import (
     BridgeRequest, BridgeResponse,
     FileSourceConfig, JobRequest, JobResponse, JobStatus, JobStatusResponse,
-    SearchRequest, SearchResponse,
+    SearchRequest, SearchResponse, SearchTaskStatusResponse, SearchTaskSubmitResponse,
     SourceType, StrategyType,
 )
-from prismrag.pipeline.job import create_job, get_job, run_job
+from prismrag.pipeline.job import create_job, get_job
 from prismrag.auth.auth import get_current_user, check_api_scope
 from prismrag.auth.tenant import assert_job_access, assert_tenant_access
 from prismrag.plans import get_plan_limits
 from prismrag.metering.quota import check_and_record, check_feature, metered
+from prismrag.tasks.dispatch import (
+    create_search_task,
+    dispatch_ingest,
+    dispatch_search_task,
+    get_search_task,
+)
 from prismrag.validation import (
     parse_mapping_json,
     validate_file_category_hints,
@@ -40,18 +47,14 @@ def health():
 
 # ── Intake: submit a mapping job ──────────────────────────────────────────────
 
-@router.post("/jobs", response_model=JobResponse)
+@router.post("/jobs", response_model=JobResponse, status_code=202)
 async def submit_job(
     request: JobRequest,
-    background_tasks: BackgroundTasks,
     user: dict = Depends(get_current_user),
 ):
     """
-    Submit an ingest job.
-
-    For small datasets (≤ SYNC_MAX_RECORDS) the job runs inline and returns
-    status=completed immediately. For large datasets it queues and returns
-    status=queued with a status_url to poll.
+    Submit an ingest job. Always returns immediately with status=queued.
+    Poll GET /jobs/{job_id} for progress and completion.
     """
     tenant_id = str(request.tenant_id)
     check_api_scope(user, "write")
@@ -61,11 +64,7 @@ async def submit_job(
 
     job_id = create_job(tenant_id, request)
     status_url = f"/api/v1/prismrag/jobs/{job_id}"
-
-    if _use_job_queue():
-        _enqueue_job(job_id, tenant_id, request, None, user)
-    else:
-        background_tasks.add_task(_run_job_bg, job_id, request, None, user)
+    dispatch_ingest(job_id, tenant_id, request, None, user)
 
     return JobResponse(
         job_id=job_id,
@@ -76,9 +75,8 @@ async def submit_job(
     )
 
 
-@router.post("/jobs/upload", response_model=JobResponse)
+@router.post("/jobs/upload", response_model=JobResponse, status_code=202)
 async def submit_job_file(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     tenant_id: str = Form(...),
     mapping: str = Form(..., description="JSON mapping: {categories, rules}"),
@@ -88,7 +86,7 @@ async def submit_job_file(
     category_column: str | None = Form(None),
     user: dict = Depends(get_current_user),
 ):
-    """Submit a file-based ingest job (multipart/form-data)."""
+    """Submit a file-based ingest job (multipart/form-data). Always async — poll job status."""
     check_api_scope(user, "write")
     _ensure_tenant_exists(tenant_id)
     assert_tenant_access(user, tenant_id, "write")
@@ -131,41 +129,16 @@ async def submit_job_file(
     validate_file_columns(upload_bytes, file_config)
     validate_file_category_hints(upload_bytes, file_config, mapping_config)
 
-    job_id     = create_job(tenant_id, request)
+    job_id = create_job(tenant_id, request)
     status_url = f"/api/v1/prismrag/jobs/{job_id}"
+    dispatch_ingest(job_id, tenant_id, request, upload_bytes, user)
 
-    if len(upload_bytes) < 1_000_000:  # < 1 MB → sync
-        try:
-            run_job(
-                job_id, request, upload_bytes,
-                user_id=user["id"], plan=user.get("plan", "free"),
-            )
-            job = get_job(job_id)
-            if job and job.get("status") == "failed":
-                raise HTTPException(
-                    status_code=422,
-                    detail=job.get("errorMessage") or "Ingest job failed",
-                )
-            chunks = job.get("recordsWritten", 0) if job else 0
-            if chunks > 0:
-                check_and_record(user, "ingest_chunk", chunks, tenant_id)
-            return JobResponse(
-                job_id=job_id, tenant_id=tenant_id,
-                status=JobStatus.completed, status_url=status_url, sync=True,
-            )
-        except HTTPException:
-            raise
-        except Exception as exc:
-            logger.exception("Sync file ingest failed for job %s", job_id)
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-    if _use_job_queue():
-        _enqueue_job(job_id, tenant_id, request, upload_bytes, user)
-    else:
-        background_tasks.add_task(_run_job_bg, job_id, request, upload_bytes, user)
     return JobResponse(
-        job_id=job_id, tenant_id=tenant_id,
-        status=JobStatus.queued, status_url=status_url, sync=False,
+        job_id=job_id,
+        tenant_id=tenant_id,
+        status=JobStatus.queued,
+        status_url=status_url,
+        sync=False,
     )
 
 
@@ -191,28 +164,48 @@ def job_status(job_id: str, user: dict = Depends(get_current_user)):
 
 # ── Serve: query the re-mapped chunk store ────────────────────────────────────
 
-@router.post("/search", response_model=SearchResponse)
-def search(
+@router.post("/search")
+async def search(
     request: SearchRequest,
     user: dict = Depends(metered("search")),
 ):
     """
     Semantic search over the re-mapped chunk store.
 
-    Uses Graph RAG retrieval (community centroid → BFS expand → MLP re-rank)
-    when the graph is built, falls back to direct HNSW cosine search otherwise.
+    Default (wait=false): returns 202 + task_id — poll GET /search/tasks/{task_id}.
+    Set wait=true to receive results in the response (still runs off the event loop).
     """
     from prismrag.retrieval.search import retrieve
-    import time
     from prismrag.audit.results import log_search_result
 
     assert_tenant_access(user, str(request.tenant_id), "read")
     check_feature(user.get("plan", "free"), "graph_rag")
+
+    request_dict = {
+        "tenant_id": str(request.tenant_id),
+        "query": request.query,
+        "mapping_id": str(request.mapping_id) if request.mapping_id else None,
+        "top_k": request.top_k,
+        "category_filter": request.category_filter,
+    }
+
+    if not request.wait:
+        task_id = create_search_task(user["id"], str(request.tenant_id), request_dict)
+        dispatch_search_task(task_id, request_dict, user)
+        body = SearchTaskSubmitResponse(
+            task_id=task_id,
+            tenant_id=str(request.tenant_id),
+            status="pending",
+            status_url=f"/api/v1/prismrag/search/tasks/{task_id}",
+        )
+        return JSONResponse(status_code=202, content=body.model_dump())
+
     t0 = time.perf_counter()
-    result = retrieve(
-        tenant_id=str(request.tenant_id),
+    result = await asyncio.to_thread(
+        retrieve,
+        tenant_id=request_dict["tenant_id"],
         query=request.query,
-        mapping_id=str(request.mapping_id) if request.mapping_id else None,
+        mapping_id=request_dict["mapping_id"],
         top_k=request.top_k,
         category_filter=request.category_filter,
     )
@@ -233,63 +226,86 @@ def search(
     return SearchResponse(**result)
 
 
+@router.get("/search/tasks/{task_id}", response_model=SearchTaskStatusResponse)
+def search_task_status(task_id: str, user: dict = Depends(get_current_user)):
+    """Poll async search task status and results."""
+    task = get_search_task(task_id, user["id"])
+    if not task:
+        raise HTTPException(status_code=404, detail="Search task not found")
+
+    result = None
+    if task.get("result"):
+        result = SearchResponse(**task["result"])
+
+    return SearchTaskStatusResponse(
+        task_id=task["task_id"],
+        tenant_id=task["tenant_id"],
+        status=task["status"],
+        request=task.get("request") or {},
+        result=result,
+        error_message=task.get("error_message"),
+        latency_ms=task.get("latency_ms"),
+        created_at=task.get("created_at"),
+        finished_at=task.get("finished_at"),
+    )
+
+
 @router.get("/communities")
-def list_communities(
+async def list_communities(
     tenant_id: str,
     mapping_id: str | None = None,
     user: dict = Depends(get_current_user),
 ):
-    """List knowledge-graph communities for a workspace (owner only)."""
+    """List knowledge-graph communities for a workspace."""
     assert_tenant_access(user, tenant_id, "read")
     check_feature(user.get("plan", "free"), "graph_rag")
-    from prismrag.db import get_conn, release_conn
-    conn = get_conn()
-    try:
-        cur = conn.cursor()
-        query = """
-            SELECT community_id, label, word_count, top_words, category_slug, mapping_id::text
-            FROM prismrag.community_summary
-            WHERE tenant_id = %s
-        """
-        params: list = [tenant_id]
-        if mapping_id:
-            query += " AND mapping_id = %s"
-            params.append(mapping_id)
-        query += " ORDER BY word_count DESC LIMIT 50"
-        cur.execute(query, params)
-        return [
-            {
-                "id": r[0],
-                "label": r[1],
-                "size": r[2],
-                "top_words": list(r[3] or [])[:10],
-                "category_slug": r[4],
-                "mapping_id": r[5],
-            }
-            for r in cur.fetchall()
-        ]
-    finally:
-        release_conn(conn)
+
+    def _query():
+        from prismrag.db import get_conn, release_conn
+        conn = get_conn()
+        try:
+            cur = conn.cursor()
+            query = """
+                SELECT community_id, label, word_count, top_words, category_slug, mapping_id::text
+                FROM prismrag.community_summary
+                WHERE tenant_id = %s
+            """
+            params: list = [tenant_id]
+            if mapping_id:
+                query += " AND mapping_id = %s"
+                params.append(mapping_id)
+            query += " ORDER BY word_count DESC LIMIT 50"
+            cur.execute(query, params)
+            return [
+                {
+                    "id": r[0],
+                    "label": r[1],
+                    "size": r[2],
+                    "top_words": list(r[3] or [])[:10],
+                    "category_slug": r[4],
+                    "mapping_id": r[5],
+                }
+                for r in cur.fetchall()
+            ]
+        finally:
+            release_conn(conn)
+
+    return await asyncio.to_thread(_query)
 
 
 # ── AP001.2: Bridge vector injection ─────────────────────────────────────────
 
 @router.post("/bridge", response_model=BridgeResponse)
-def create_bridge(
+async def create_bridge(
     request: BridgeRequest,
     user: dict = Depends(metered("bridge_create", feature="bridge_vectors")),
 ):
-    """
-    Create a synthetic bridge vector between two existing communities.
-
-    The bridge vector is computed as:
-        bridge = normalize(centroid_A + centroid_B) / 2
-    and stored in prismrag.bridge_vector so retrieval queries from either
-    community find a path to the other.
-    """
+    """Create a synthetic bridge vector between two communities."""
     from prismrag.retrieval.bridge import create_bridge_vector
+
     assert_tenant_access(user, str(request.tenant_id), "write")
-    result = create_bridge_vector(
+    result = await asyncio.to_thread(
+        create_bridge_vector,
         tenant_id=str(request.tenant_id),
         mapping_id=str(request.mapping_id),
         community_a=request.community_a,
@@ -300,29 +316,33 @@ def create_bridge(
 
 
 @router.get("/bridge/{tenant_id}/{mapping_id}")
-def list_bridges(
+async def list_bridges(
     tenant_id: str,
     mapping_id: str,
     user: dict = Depends(get_current_user),
 ):
-    """List all bridge vectors for a tenant/mapping (owner only)."""
+    """List all bridge vectors for a tenant/mapping."""
     assert_tenant_access(user, tenant_id, "read")
-    from prismrag.db import get_conn, release_conn
-    conn = get_conn()
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT id, community_a, community_b, label, created_at "
-            "FROM prismrag.bridge_vector WHERE tenant_id = %s AND mapping_id = %s",
-            (tenant_id, mapping_id),
-        )
-        return [
-            {"bridgeId": r[0], "communityA": r[1], "communityB": r[2],
-             "label": r[3], "createdAt": r[4].isoformat() if r[4] else None}
-            for r in cur.fetchall()
-        ]
-    finally:
-        release_conn(conn)
+
+    def _query():
+        from prismrag.db import get_conn, release_conn
+        conn = get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, community_a, community_b, label, created_at "
+                "FROM prismrag.bridge_vector WHERE tenant_id = %s AND mapping_id = %s",
+                (tenant_id, mapping_id),
+            )
+            return [
+                {"bridgeId": r[0], "communityA": r[1], "communityB": r[2],
+                 "label": r[3], "createdAt": r[4].isoformat() if r[4] else None}
+                for r in cur.fetchall()
+            ]
+        finally:
+            release_conn(conn)
+
+    return await asyncio.to_thread(_query)
 
 
 # ── Tenant management ─────────────────────────────────────────────────────────
@@ -376,7 +396,7 @@ def _check_tenant_quota(user: dict) -> None:
     plan   = user.get("plan", "free")
     limits = get_plan_limits(plan)
     max_t  = limits["max_tenants"]
-    if max_t < 0:  # -1 = unlimited (enterprise)
+    if max_t < 0:
         return
     from prismrag.db import get_conn, release_conn
     conn = get_conn()
@@ -395,43 +415,3 @@ def _check_tenant_quota(user: dict) -> None:
             )
     finally:
         release_conn(conn)
-
-
-def _use_job_queue() -> bool:
-    return os.getenv("PRISMRAG_USE_JOB_QUEUE", "").lower() in ("1", "true", "yes")
-
-
-def _enqueue_job(
-    job_id: str,
-    tenant_id: str,
-    request: JobRequest,
-    upload_bytes: bytes | None,
-    user: dict,
-) -> None:
-    import base64
-    from prismrag.worker.job_worker import enqueue_job
-
-    payload = request.model_dump(mode="json")
-    upload_b64 = base64.b64encode(upload_bytes).decode() if upload_bytes else None
-    enqueue_job(job_id, tenant_id, payload, upload_b64, user.get("id"))
-
-
-def _run_job_bg(
-    job_id: str,
-    request: JobRequest,
-    upload_bytes: bytes | None,
-    user: dict | None = None,
-) -> None:
-    try:
-        run_job(
-            job_id, request, upload_bytes,
-            user_id=user.get("id") if user else None,
-            plan=user.get("plan", "free") if user else "free",
-        )
-        if user:
-            job = get_job(job_id)
-            chunks = job.get("recordsWritten", 0) if job else 0
-            if chunks > 0:
-                check_and_record(user, "ingest_chunk", chunks, str(request.tenant_id))
-    except Exception:
-        pass  # already logged + written to DB inside run_job

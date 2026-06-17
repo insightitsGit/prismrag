@@ -221,24 +221,43 @@ def _handle_search(args: dict) -> str:
     tenant = args.get("tenant_id") or TENANT_ID
     if not tenant:
         return "Error: tenant_id required. Set PRISMRAG_TENANT_ID env var or pass tenant_id."
-    result = _call("post", "/api/v1/prismrag/search", json={
+
+    wait = args.get("wait", True)
+    raw = _call("post", "/api/v1/prismrag/search", json={
         "tenant_id":       tenant,
         "query":           args["query"],
         "top_k":           args.get("top_k", 10),
         "category_filter": args.get("category_filter"),
+        "wait":            wait,
     })
+
+    result = raw
+    if raw.get("task_id") and not raw.get("hits"):
+        import time
+        task_id = raw["task_id"]
+        for _ in range(60):
+            time.sleep(1)
+            task = _call("get", f"/api/v1/prismrag/search/tasks/{task_id}")
+            if task.get("status") == "completed" and task.get("result"):
+                result = task["result"]
+                break
+            if task.get("status") == "failed":
+                return f"Search failed: {task.get('error_message', 'unknown error')}"
+        else:
+            return f"Search task {task_id} timed out after 60s. Poll status_url manually."
+
     hits = result.get("hits", [])
     if not hits:
         return f"No results found for: {args['query']}"
 
     lines = [
         f"Search: '{args['query']}' — {len(hits)} results "
-        f"({result.get('retrieval_mode', 'unknown')} mode, {result.get('latency_ms', '?')}ms)\n"
+        f"({result.get('retrieval_mode', 'unknown')} mode)\n"
     ]
     for i, h in enumerate(hits, 1):
         lines.append(
-            f"{i}. [{h.get('score', 0):.3f}] {h.get('word', '')} — {h.get('text', '')}\n"
-            f"   Category: {h.get('category', '?')} | "
+            f"{i}. [{h.get('score', 0):.3f}] {h.get('chunk_ref', '')} — {h.get('chunk_text', '')}\n"
+            f"   Category: {h.get('category_slug', '?')} | "
             f"Community: {h.get('community_label', 'unassigned')}"
         )
     return "\n".join(lines)
