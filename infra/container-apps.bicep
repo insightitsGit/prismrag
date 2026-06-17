@@ -11,6 +11,13 @@ param location string = resourceGroup().location
 @description('Container registry login server (e.g. prismrag.azurecr.io)')
 param acrLoginServer string
 
+@description('ACR registry name (username for admin login)')
+param acrName string = 'prismragacr'
+
+@secure()
+@description('ACR admin password for image pull')
+param acrPassword string
+
 @description('Container image tag')
 param imageTag string = 'latest'
 
@@ -134,6 +141,15 @@ var sharedSecrets = [
   { name: 'stripe-webhook',  value: empty(stripeWebhookSecret)       ? 'not-configured' : stripeWebhookSecret }
   { name: 'redis-url',       value: resolvedRedisUrl }
   { name: 'servicebus-conn', value: empty(serviceBusConnectionString) ? 'not-configured' : serviceBusConnectionString }
+  { name: 'acr-password',    value: acrPassword }
+]
+
+var registryConfig = [
+  {
+    server: acrLoginServer
+    username: acrName
+    passwordSecretRef: 'acr-password'
+  }
 ]
 
 // ── API service ────────────────────────────────────────────────────────────
@@ -144,6 +160,7 @@ resource apiApp 'Microsoft.App/containerApps@2023-05-01' = {
     managedEnvironmentId: env.id
     configuration: {
       secrets: sharedSecrets
+      registries: registryConfig
       ingress: {
         external: true
         targetPort: 8001
@@ -200,6 +217,7 @@ resource workerApp 'Microsoft.App/containerApps@2023-05-01' = {
     managedEnvironmentId: env.id
     configuration: {
       secrets: sharedSecrets
+      registries: registryConfig
     }
     template: {
       containers: [
