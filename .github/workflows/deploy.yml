@@ -15,9 +15,10 @@ on:
 
 env:
   ACR_LOGIN_SERVER: prismragacr.azurecr.io
-  ACR_NAME: prismragacr
   RESOURCE_GROUP: prismrag-rg
   LOCATION: eastus2
+  # User-assigned managed identity that has AcrPull on prismragacr
+  PULL_IDENTITY_NAME: prismrag-pull-id
 
 jobs:
   # ── 1. Lint ───────────────────────────────────────────────────────────────
@@ -116,46 +117,28 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # ── Step 1: Deploy infrastructure via Bicep (env, logs, postgres, redis)
-      # Container apps are NOT in the Bicep — we deploy them via CLI below
-      # so registry auth is handled reliably by az containerapp CLI.
+      # ── Resolve the managed identity resource ID (pre-created, has AcrPull)
+      - name: Resolve pull identity
+        id: identity
+        run: |
+          ID=$(az identity show \
+            --name "${{ env.PULL_IDENTITY_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query id -o tsv)
+          echo "id=${ID}" >> $GITHUB_OUTPUT
+
+      # ── Deploy infrastructure (env, logs, optional postgres/redis)
       - name: Deploy infrastructure (Bicep)
         run: |
           az deployment group create \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --template-file infra/container-env.bicep \
-            --parameters \
-              location="${{ env.LOCATION }}" \
-              externalDb=true \
-              deployRedis=false \
+            --parameters location="${{ env.LOCATION }}" externalDb=true deployRedis=false \
             --mode Incremental \
             --output none
 
-      # ── Step 2: Build shared env-vars string for container apps
-      - name: Build shared env-vars
-        id: envvars
-        run: |
-          # Write env vars as key=value pairs for az containerapp create/update
-          cat > /tmp/envvars.txt << 'EOF'
-          PRISMRAG_DB_DSN=secretref:db-dsn
-          REDIS_URL=secretref:redis-url
-          JWT_SECRET=secretref:jwt-secret
-          GEMINI_API_KEY=secretref:gemini-key
-          STRIPE_SECRET_KEY=secretref:stripe-secret
-          STRIPE_WEBHOOK_SECRET=secretref:stripe-webhook
-          AZURE_SERVICE_BUS_CONNECTION_STRING=secretref:servicebus-conn
-          AZURE_COMMUNICATION_CONNECTION_STRING=secretref:acs-conn
-          STRIPE_PRICE_STARTER=${{ secrets.STRIPE_PRICE_STARTER || 'not-configured' }}
-          STRIPE_PRICE_PROFESSIONAL=${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }}
-          STRIPE_PRICE_ENTERPRISE=${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }}
-          PRISMRAG_ENV=production
-          PRISMRAG_EMAIL_ENABLED=true
-          PRISMRAG_EMAIL_FROM=${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }}
-          PRISMRAG_BASE_URL=${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}
-          EOF
-
-      # ── Step 3: Deploy API container app via CLI (registry auth is reliable here)
-      - name: Deploy API container app
+      # ── Deploy / update API container app
+      - name: Deploy API
         env:
           DB_DSN: ${{ secrets.DB_CONNECTION_STRING }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -165,60 +148,56 @@ jobs:
           SB_CONN: ${{ secrets.SERVICE_BUS_CONN_STR }}
           ACS_CONN: ${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}
           TAG: ${{ needs.build.outputs.image_tag }}
+          IDENTITY_ID: ${{ steps.identity.outputs.id }}
         run: |
-          NOT_CFG="not-configured"
-          DB="${DB_DSN:-$NOT_CFG}"
-          SK="${STRIPE_SK:-$NOT_CFG}"
-          WH="${STRIPE_WH:-$NOT_CFG}"
-          SB="${SB_CONN:-$NOT_CFG}"
-          AC="${ACS_CONN:-$NOT_CFG}"
+          NC="not-configured"
+          DB="${DB_DSN:-$NC}" SK="${STRIPE_SK:-$NC}" WH="${STRIPE_WH:-$NC}"
+          SB="${SB_CONN:-$NC}" AC="${ACS_CONN:-$NC}"
 
           SECRETS="db-dsn=${DB} jwt-secret=${JWT_SECRET} gemini-key=${GEMINI_API_KEY} \
             stripe-secret=${SK} stripe-webhook=${WH} \
-            redis-url=not-configured servicebus-conn=${SB} acs-conn=${AC}"
+            redis-url=${NC} servicebus-conn=${SB} acs-conn=${AC}"
 
+          ENV_VARS="PRISMRAG_DB_DSN=secretref:db-dsn \
+            REDIS_URL=secretref:redis-url \
+            JWT_SECRET=secretref:jwt-secret \
+            GEMINI_API_KEY=secretref:gemini-key \
+            STRIPE_SECRET_KEY=secretref:stripe-secret \
+            STRIPE_WEBHOOK_SECRET=secretref:stripe-webhook \
+            AZURE_SERVICE_BUS_CONNECTION_STRING=secretref:servicebus-conn \
+            AZURE_COMMUNICATION_CONNECTION_STRING=secretref:acs-conn \
+            STRIPE_PRICE_STARTER=${{ secrets.STRIPE_PRICE_STARTER || 'not-configured' }} \
+            STRIPE_PRICE_PROFESSIONAL=${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }} \
+            STRIPE_PRICE_ENTERPRISE=${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }} \
+            PRISMRAG_ENV=production \
+            PRISMRAG_EMAIL_ENABLED=true \
+            PRISMRAG_EMAIL_FROM=${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }} \
+            PRISMRAG_BASE_URL=${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}"
+
+          # Try create (first deploy); on conflict update image + secrets
           az containerapp create \
             --name prismrag-api \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --environment prismrag-env \
             --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-api:${TAG}" \
             --registry-server "${{ env.ACR_LOGIN_SERVER }}" \
-            --registry-username "${{ secrets.ACR_USERNAME }}" \
-            --registry-password "${{ secrets.ACR_PASSWORD }}" \
-            --target-port 8001 \
-            --ingress external \
-            --min-replicas 1 \
-            --max-replicas 20 \
+            --registry-identity "${IDENTITY_ID}" \
+            --user-assigned "${IDENTITY_ID}" \
+            --target-port 8001 --ingress external \
+            --min-replicas 1 --max-replicas 20 \
             --cpu 0.5 --memory 1Gi \
             --secrets $SECRETS \
-            --env-vars \
-              PRISMRAG_DB_DSN=secretref:db-dsn \
-              REDIS_URL=secretref:redis-url \
-              JWT_SECRET=secretref:jwt-secret \
-              GEMINI_API_KEY=secretref:gemini-key \
-              STRIPE_SECRET_KEY=secretref:stripe-secret \
-              STRIPE_WEBHOOK_SECRET=secretref:stripe-webhook \
-              AZURE_SERVICE_BUS_CONNECTION_STRING=secretref:servicebus-conn \
-              AZURE_COMMUNICATION_CONNECTION_STRING=secretref:acs-conn \
-              STRIPE_PRICE_STARTER="${{ secrets.STRIPE_PRICE_STARTER || 'not-configured' }}" \
-              STRIPE_PRICE_PROFESSIONAL="${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }}" \
-              STRIPE_PRICE_ENTERPRISE="${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }}" \
-              PRISMRAG_ENV=production \
-              PRISMRAG_EMAIL_ENABLED=true \
-              PRISMRAG_EMAIL_FROM="${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }}" \
-              PRISMRAG_BASE_URL="${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}" \
+            --env-vars $ENV_VARS \
             --output none \
-          || az containerapp update \
+          2>/dev/null || \
+          az containerapp update \
             --name prismrag-api \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-api:${TAG}" \
-            --registry-server "${{ env.ACR_LOGIN_SERVER }}" \
-            --registry-username "${{ secrets.ACR_USERNAME }}" \
-            --registry-password "${{ secrets.ACR_PASSWORD }}" \
             --output none
 
-      # ── Step 4: Deploy Worker container app
-      - name: Deploy Worker container app
+      # ── Deploy / update Worker container app
+      - name: Deploy Worker
         env:
           DB_DSN: ${{ secrets.DB_CONNECTION_STRING }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -228,17 +207,31 @@ jobs:
           SB_CONN: ${{ secrets.SERVICE_BUS_CONN_STR }}
           ACS_CONN: ${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}
           TAG: ${{ needs.build.outputs.image_tag }}
+          IDENTITY_ID: ${{ steps.identity.outputs.id }}
         run: |
-          NOT_CFG="not-configured"
-          DB="${DB_DSN:-$NOT_CFG}"
-          SK="${STRIPE_SK:-$NOT_CFG}"
-          WH="${STRIPE_WH:-$NOT_CFG}"
-          SB="${SB_CONN:-$NOT_CFG}"
-          AC="${ACS_CONN:-$NOT_CFG}"
+          NC="not-configured"
+          DB="${DB_DSN:-$NC}" SK="${STRIPE_SK:-$NC}" WH="${STRIPE_WH:-$NC}"
+          SB="${SB_CONN:-$NC}" AC="${ACS_CONN:-$NC}"
 
           SECRETS="db-dsn=${DB} jwt-secret=${JWT_SECRET} gemini-key=${GEMINI_API_KEY} \
             stripe-secret=${SK} stripe-webhook=${WH} \
-            redis-url=not-configured servicebus-conn=${SB} acs-conn=${AC}"
+            redis-url=${NC} servicebus-conn=${SB} acs-conn=${AC}"
+
+          ENV_VARS="PRISMRAG_DB_DSN=secretref:db-dsn \
+            REDIS_URL=secretref:redis-url \
+            JWT_SECRET=secretref:jwt-secret \
+            GEMINI_API_KEY=secretref:gemini-key \
+            STRIPE_SECRET_KEY=secretref:stripe-secret \
+            STRIPE_WEBHOOK_SECRET=secretref:stripe-webhook \
+            AZURE_SERVICE_BUS_CONNECTION_STRING=secretref:servicebus-conn \
+            AZURE_COMMUNICATION_CONNECTION_STRING=secretref:acs-conn \
+            STRIPE_PRICE_STARTER=${{ secrets.STRIPE_PRICE_STARTER || 'not-configured' }} \
+            STRIPE_PRICE_PROFESSIONAL=${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }} \
+            STRIPE_PRICE_ENTERPRISE=${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }} \
+            PRISMRAG_ENV=production \
+            PRISMRAG_EMAIL_ENABLED=true \
+            PRISMRAG_EMAIL_FROM=${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }} \
+            PRISMRAG_BASE_URL=${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}"
 
           az containerapp create \
             --name prismrag-worker \
@@ -246,49 +239,29 @@ jobs:
             --environment prismrag-env \
             --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-worker:${TAG}" \
             --registry-server "${{ env.ACR_LOGIN_SERVER }}" \
-            --registry-username "${{ secrets.ACR_USERNAME }}" \
-            --registry-password "${{ secrets.ACR_PASSWORD }}" \
-            --min-replicas 0 \
-            --max-replicas 10 \
+            --registry-identity "${IDENTITY_ID}" \
+            --user-assigned "${IDENTITY_ID}" \
+            --min-replicas 0 --max-replicas 10 \
             --cpu 1.0 --memory 2Gi \
             --secrets $SECRETS \
-            --env-vars \
-              PRISMRAG_DB_DSN=secretref:db-dsn \
-              REDIS_URL=secretref:redis-url \
-              JWT_SECRET=secretref:jwt-secret \
-              GEMINI_API_KEY=secretref:gemini-key \
-              STRIPE_SECRET_KEY=secretref:stripe-secret \
-              STRIPE_WEBHOOK_SECRET=secretref:stripe-webhook \
-              AZURE_SERVICE_BUS_CONNECTION_STRING=secretref:servicebus-conn \
-              AZURE_COMMUNICATION_CONNECTION_STRING=secretref:acs-conn \
-              STRIPE_PRICE_STARTER="${{ secrets.STRIPE_PRICE_STARTER || 'not-configured' }}" \
-              STRIPE_PRICE_PROFESSIONAL="${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }}" \
-              STRIPE_PRICE_ENTERPRISE="${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }}" \
-              PRISMRAG_ENV=production \
-              PRISMRAG_EMAIL_ENABLED=true \
-              PRISMRAG_EMAIL_FROM="${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }}" \
-              PRISMRAG_BASE_URL="${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}" \
+            --env-vars $ENV_VARS \
             --output none \
-          || az containerapp update \
+          2>/dev/null || \
+          az containerapp update \
             --name prismrag-worker \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-worker:${TAG}" \
-            --registry-server "${{ env.ACR_LOGIN_SERVER }}" \
-            --registry-username "${{ secrets.ACR_USERNAME }}" \
-            --registry-password "${{ secrets.ACR_PASSWORD }}" \
             --output none
 
-      # ── Step 5: Health check
+      # ── Health check
       - name: Wait for API health
         run: |
           API_URL=$(az containerapp show \
             --name prismrag-api \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --query properties.configuration.ingress.fqdn \
-            -o tsv)
+            --query properties.configuration.ingress.fqdn -o tsv)
           echo "API_URL=https://${API_URL}" >> $GITHUB_ENV
           echo "Polling https://${API_URL}/api/v1/prismrag/health ..."
-
           for i in $(seq 1 20); do
             STATUS=$(curl -sf "https://${API_URL}/api/v1/prismrag/health" \
                      -o /dev/null -w "%{http_code}" 2>/dev/null || echo "000")
@@ -296,7 +269,7 @@ jobs:
             [ "$STATUS" = "200" ] && { echo "Health check passed."; exit 0; }
             sleep 15
           done
-          echo "Health check timed out after 300s" && exit 1
+          echo "Health check timed out" && exit 1
 
       - name: Deployment summary
         if: success()
