@@ -70,6 +70,17 @@ def _check_email() -> dict:
     return {"status": "degraded", "note": "Azure Communication Services not configured"}
 
 
+def _check_stripe() -> dict:
+    from prismrag.billing.catalog import stripe_status
+
+    info = stripe_status()
+    if info["configured"] and info["webhook_secret_set"]:
+        return {"status": "operational", "plans": list(info["price_ids"].keys())}
+    if info["secret_key_set"] and info["price_ids"]:
+        return {"status": "degraded", "note": "Stripe partially configured", **info}
+    return {"status": "degraded", "note": "Stripe billing not configured"}
+
+
 def _overall(components: dict) -> str:
     statuses = [c.get("status") for c in components.values()]
     if "outage" in statuses:
@@ -88,6 +99,7 @@ def public_status():
         "redis":      _check_redis(),
         "job_worker": _check_worker(),
         "email":      _check_email(),
+        "billing":    _check_stripe(),
         "search":     {"status": "operational" if os.getenv("GEMINI_API_KEY") else "degraded"},
     }
     incidents = _active_incidents()

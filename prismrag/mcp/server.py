@@ -264,16 +264,19 @@ def _handle_search(args: dict) -> str:
 
 
 def _handle_list_workspaces(_args: dict) -> str:
-    # Use /api/auth/me to get user info and echo back what we know
-    # Full workspace list requires a GET /api/prismrag/tenants endpoint
     try:
-        me = _call("get", "/api/v1/auth/me")
-        usage = _call("get", "/api/v1/auth/usage")
-        return (
-            f"User: {me.get('email')} | Plan: {me.get('plan')}\n"
-            f"Workspaces used: {usage.get('tenants_count', '?')}\n"
-            f"Default tenant: {TENANT_ID or '(not set — pass tenant_id in each call)'}"
-        )
+        tenants = _call("get", "/api/v1/prismrag/tenants")
+        if not tenants:
+            return "No workspaces yet. Create one via the dashboard or POST /api/v1/prismrag/tenants."
+        lines = [f"Workspaces ({len(tenants)}):\n"]
+        for t in tenants:
+            lines.append(
+                f"  • {t.get('name', '?')} — {t.get('tenant_id')} "
+                f"({t.get('role', 'member')}, {t.get('data_region', 'us-east')})"
+            )
+        if TENANT_ID:
+            lines.append(f"\nDefault tenant (env): {TENANT_ID}")
+        return "\n".join(lines)
     except Exception as exc:
         return f"Error: {exc}"
 

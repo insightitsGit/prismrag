@@ -5,25 +5,31 @@ import os
 
 import stripe
 
+from prismrag.billing.catalog import (
+    PAID_PLANS,
+    get_plan_from_price_id,
+    get_price_ids,
+    is_stripe_configured,
+)
+
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
-STRIPE_WEBHOOK_SECRET  = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
-# Stripe Price IDs — create these once in your Stripe dashboard
-# or via the Stripe API and set the env vars.
-PRICE_IDS: dict[str, str] = {
-    "starter":      os.getenv("STRIPE_PRICE_STARTER",      "price_starter_monthly"),
-    "professional": os.getenv("STRIPE_PRICE_PROFESSIONAL", "price_professional_monthly"),
-    "enterprise":   os.getenv("STRIPE_PRICE_ENTERPRISE",   "price_enterprise_monthly"),
-}
+PRICE_IDS: dict[str, str] = get_price_ids()
 
-PLAN_FROM_PRICE: dict[str, str] = {v: k for k, v in PRICE_IDS.items()}
+
+def _refresh_price_ids() -> None:
+    """Reload price IDs from env (tests may patch os.environ)."""
+    global PRICE_IDS
+    PRICE_IDS = get_price_ids()
 
 
 def get_or_create_customer(user_id: str, email: str, name: str) -> str:
     """Return Stripe customer ID, creating one if needed."""
     from prismrag.db import get_conn, release_conn
+
     conn = get_conn()
     try:
         cur = conn.cursor()
@@ -40,7 +46,11 @@ def get_or_create_customer(user_id: str, email: str, name: str) -> str:
     customer = stripe.Customer.create(
         email=email,
         name=name,
-        metadata={"prismrag_user_id": user_id},
+        metadata={
+            "prismrag_user_id": user_id,
+            "app": "insight_prismrag",
+            "billing_group": "prismrag_saas",
+        },
     )
     cid = customer["id"]
 
@@ -67,9 +77,16 @@ def create_checkout_session(
     cancel_url: str,
 ) -> str:
     """Create a Stripe Checkout session. Returns the session URL."""
+    _refresh_price_ids()
+    if not is_stripe_configured():
+        raise RuntimeError("Stripe is not fully configured (secret key + price IDs required)")
+
+    if plan not in PAID_PLANS:
+        raise ValueError(f"Plan is not available for checkout: {plan}")
+
     price_id = PRICE_IDS.get(plan)
     if not price_id:
-        raise ValueError(f"Unknown plan: {plan}")
+        raise ValueError(f"No Stripe price configured for plan: {plan}")
 
     customer_id = get_or_create_customer(user_id, email, name)
 
@@ -80,7 +97,16 @@ def create_checkout_session(
         success_url=success_url + "?session_id={CHECKOUT_SESSION_ID}",
         cancel_url=cancel_url,
         subscription_data={
-            "metadata": {"prismrag_user_id": user_id, "plan": plan}
+            "metadata": {
+                "prismrag_user_id": user_id,
+                "plan": plan,
+                "billing_group": "prismrag_saas",
+            }
+        },
+        metadata={
+            "prismrag_user_id": user_id,
+            "plan": plan,
+            "billing_group": "prismrag_saas",
         },
         allow_promotion_codes=True,
     )
@@ -97,10 +123,10 @@ def create_portal_session(customer_id: str, return_url: str) -> str:
 
 
 def handle_webhook(payload: bytes, sig_header: str) -> dict | None:
-    """
-    Verify + parse a Stripe webhook event.
-    Returns the event dict or raises on invalid signature.
-    """
+    """Verify + parse a Stripe webhook event."""
+    if not STRIPE_WEBHOOK_SECRET or STRIPE_WEBHOOK_SECRET.startswith("PASTE_"):
+        raise ValueError("STRIPE_WEBHOOK_SECRET is not configured")
+
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, STRIPE_WEBHOOK_SECRET
@@ -118,8 +144,9 @@ def _update_subscription_in_db(
     subscription_id: str,
     period_end: int | None,
 ) -> None:
-    from prismrag.db import get_conn, release_conn
     from datetime import datetime, timezone
+
+    from prismrag.db import get_conn, release_conn
 
     period_end_dt = (
         datetime.fromtimestamp(period_end, tz=timezone.utc) if period_end else None
@@ -145,22 +172,38 @@ def _update_subscription_in_db(
         release_conn(conn)
 
 
+def _subscription_price_id(subscription_obj: dict) -> str | None:
+    items = subscription_obj.get("items", {}).get("data", [])
+    if not items:
+        return None
+    price = items[0].get("price") or {}
+    return price.get("id")
+
+
+def _apply_subscription_event(subscription_obj: dict) -> str:
+    price_id = _subscription_price_id(subscription_obj)
+    if not price_id:
+        return "subscription event missing price"
+    plan = get_plan_from_price_id(price_id)
+    if not plan:
+        return f"unknown price id: {price_id}"
+    _update_subscription_in_db(
+        stripe_customer_id=subscription_obj["customer"],
+        plan=plan,
+        status=subscription_obj["status"],
+        subscription_id=subscription_obj["id"],
+        period_end=subscription_obj.get("current_period_end"),
+    )
+    return f"subscription {subscription_obj['status']} → {plan}"
+
+
 def process_webhook_event(event: dict) -> str:
-    """Handle the relevant Stripe events. Returns a status string."""
+    """Handle Stripe billing events. Returns a status string."""
     etype = event["type"]
-    obj   = event["data"]["object"]
+    obj = event["data"]["object"]
 
     if etype in ("customer.subscription.created", "customer.subscription.updated"):
-        price_id = obj["items"]["data"][0]["price"]["id"]
-        plan     = PLAN_FROM_PRICE.get(price_id, "starter")
-        _update_subscription_in_db(
-            stripe_customer_id=obj["customer"],
-            plan=plan,
-            status=obj["status"],
-            subscription_id=obj["id"],
-            period_end=obj.get("current_period_end"),
-        )
-        return f"subscription {obj['status']}"
+        return _apply_subscription_event(obj)
 
     if etype == "customer.subscription.deleted":
         _update_subscription_in_db(
@@ -172,8 +215,18 @@ def process_webhook_event(event: dict) -> str:
         )
         return "subscription canceled → downgraded to free"
 
+    if etype == "checkout.session.completed":
+        if obj.get("mode") != "subscription":
+            return "checkout completed (non-subscription)"
+        sub_id = obj.get("subscription")
+        if not sub_id:
+            return "checkout completed without subscription id"
+        subscription = stripe.Subscription.retrieve(sub_id)
+        return _apply_subscription_event(subscription)
+
     if etype == "invoice.payment_failed":
         from prismrag.db import get_conn, release_conn
+
         conn = get_conn()
         try:
             cur = conn.cursor()

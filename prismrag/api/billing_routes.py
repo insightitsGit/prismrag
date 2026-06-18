@@ -8,6 +8,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from prismrag.auth.auth import get_current_user
+from prismrag.billing.catalog import (
+    PAID_PLANS,
+    PLAN_CATALOG,
+    format_price_display,
+    format_price_period,
+    is_stripe_configured,
+    stripe_status,
+)
 from prismrag.billing.stripe_client import (
     create_checkout_session,
     create_portal_session,
@@ -17,64 +25,100 @@ from prismrag.billing.stripe_client import (
 )
 
 router = APIRouter(prefix="/api/v1/billing", tags=["Billing"])
-billing_router = router  # alias used in main.py
+billing_router = router
 
-BASE_URL = os.getenv("PRISMRAG_BASE_URL", "http://localhost:8001")
+BASE_URL = os.getenv("PRISMRAG_BASE_URL", "http://localhost:8001").rstrip("/")
+PRICING_URL = f"{BASE_URL}/index.html#pricing"
 
 
 class CheckoutIn(BaseModel):
-    plan: str  # starter | professional | enterprise
+    plan: str
 
 
-@router.get("/plans")
-def list_plans():
-    """Return plan details from DB and Stripe publishable key for frontend."""
-    from prismrag.plans import get_all_plans
+def _plan_payload(pid: str, limits: dict) -> dict:
+    meta = PLAN_CATALOG.get(pid, {"name": pid.title(), "price_cents": 0, "description": ""})
 
-    plans_db = get_all_plans()
     def _fmt_chunks(n: int) -> str:
         if n <= 0:
             return "Unlimited chunks"
         return f"{n:,} chunks / month"
 
-    plan_meta = {
-        "free":         {"name": "Free", "price": 0, "cta": "Start Free"},
-        "starter":      {"name": "Starter", "price": 4900, "cta": "Start Starter"},
-        "professional": {"name": "Professional", "price": 19900, "cta": "Start Professional", "popular": True},
-        "enterprise":   {"name": "Enterprise", "price": None, "cta": "Contact Sales"},
-    }
-    plans = []
-    for pid, limits in plans_db.items():
-        meta = plan_meta.get(pid, {"name": pid.title(), "price": 0, "cta": "Select"})
-        features = [_fmt_chunks(limits["monthly_chunks"])]
-        mt = limits["max_tenants"]
-        features.append("Unlimited workspaces" if mt < 0 else f"{mt} workspace(s)")
-        if limits.get("graph_rag"):
-            features.append("Graph RAG retrieval")
-        if limits.get("tier2_mlp"):
-            features.append("Tier-2 MLP training")
-        if limits.get("bridge_vectors"):
-            features.append("Bridge vectors")
-        plans.append({
-            "id": pid,
-            "name": meta["name"],
-            "price": meta["price"],
-            "currency": "usd",
-            "interval": "month",
-            "features": features,
-            "cta": meta["cta"],
-            "popular": meta.get("popular", False),
-        })
+    features = [_fmt_chunks(limits["monthly_chunks"])]
+    mt = limits["max_tenants"]
+    features.append("Unlimited workspaces" if mt < 0 else f"{mt} workspace(s)")
+    if limits.get("graph_rag"):
+        features.append("Graph RAG retrieval")
+    if limits.get("tier2_mlp"):
+        features.append("Tier-2 MLP training")
+    if limits.get("bridge_vectors"):
+        features.append("Bridge vectors")
+    if pid == "enterprise":
+        features.extend(["SCIM SSO", "CMEK", "99.9% SLA"])
 
-    return {"stripePublishableKey": STRIPE_PUBLISHABLE_KEY, "plans": plans}
+    price_cents = meta.get("price_cents")
+    interval = meta.get("billing_interval", "month")
+    return {
+        "id": pid,
+        "name": meta["name"],
+        "price": price_cents,
+        "price_cents": price_cents,
+        "price_display": format_price_display(pid),
+        "price_period": format_price_period(pid),
+        "description": meta.get("description", ""),
+        "currency": "usd",
+        "interval": interval,
+        "billing_type": meta.get("billing_type", "subscription"),
+        "monthly_deliberations": meta.get("monthly_deliberations"),
+        "features": features,
+        "cta": meta.get("cta", "Select"),
+        "popular": meta.get("popular", False),
+        "sellable": meta.get("sellable", False),
+        "stripe_checkout": meta.get("stripe_checkout", False),
+    }
+
+
+@router.get("/config")
+def billing_config():
+    """Stripe wiring status (no secrets exposed)."""
+    return stripe_status()
+
+
+@router.get("/plans")
+def list_plans():
+    """Return sellable plans + Stripe publishable key for the dashboard."""
+    from prismrag.plans import get_all_plans
+
+    plans_db = get_all_plans()
+    order = ("free", "starter", "professional", "enterprise")
+    plans = [
+        _plan_payload(pid, plans_db[pid])
+        for pid in order
+        if pid in plans_db
+    ]
+    pk = STRIPE_PUBLISHABLE_KEY if STRIPE_PUBLISHABLE_KEY.startswith("pk_") else ""
+    return {
+        "stripePublishableKey": pk,
+        "publishable_key": pk,
+        "stripe_configured": is_stripe_configured(),
+        "billing_type": "subscription",
+        "billing_interval": "month",
+        "plans": plans,
+    }
 
 
 @router.post("/checkout")
 def create_checkout(body: CheckoutIn, user: dict = Depends(get_current_user)):
-    if body.plan == "enterprise":
-        return {"redirect": "mailto:sales@prismrag.io?subject=Enterprise%20Inquiry"}
     if body.plan == "free":
-        return {"redirect": f"{BASE_URL}/dashboard"}
+        return {"redirect": f"{BASE_URL}/dashboard.html"}
+
+    if body.plan not in PAID_PLANS:
+        raise HTTPException(status_code=400, detail=f"Unknown plan: {body.plan}")
+
+    if not is_stripe_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Billing is not configured. Contact support.",
+        )
 
     try:
         url = create_checkout_session(
@@ -82,17 +126,20 @@ def create_checkout(body: CheckoutIn, user: dict = Depends(get_current_user)):
             email=user["email"],
             name=user.get("fullName") or user["email"],
             plan=body.plan,
-            success_url=f"{BASE_URL}/dashboard?upgrade=success",
-            cancel_url=f"{BASE_URL}/pricing",
+            success_url=f"{BASE_URL}/dashboard.html?upgrade=success",
+            cancel_url=PRICING_URL,
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return {"redirect": url}
 
 
 @router.post("/portal")
 def billing_portal(user: dict = Depends(get_current_user)):
+    if not is_stripe_configured():
+        raise HTTPException(status_code=503, detail="Billing is not configured")
+
     cid = user.get("stripeCustomerId")
     if not cid:
         raise HTTPException(
@@ -101,7 +148,7 @@ def billing_portal(user: dict = Depends(get_current_user)):
         )
     url = create_portal_session(
         customer_id=cid,
-        return_url=f"{BASE_URL}/dashboard",
+        return_url=f"{BASE_URL}/dashboard.html",
     )
     return {"redirect": url}
 
@@ -109,7 +156,7 @@ def billing_portal(user: dict = Depends(get_current_user)):
 @router.post("/webhook")
 async def stripe_webhook(request: Request):
     """Stripe sends signed events here. Must be publicly reachable."""
-    payload    = await request.body()
+    payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
     try:

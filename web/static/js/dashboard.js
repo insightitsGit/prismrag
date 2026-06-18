@@ -81,6 +81,12 @@ document.querySelectorAll('[data-goto]').forEach(a => {
   if (me.plan === 'enterprise') {
     document.querySelectorAll('.nav-enterprise').forEach(el => { el.style.display = ''; });
   }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('upgrade') === 'success') {
+    showSection('billing');
+    history.replaceState({}, '', '/dashboard.html');
+  }
 })();
 
 document.getElementById('signout-btn').addEventListener('click', e => { e.preventDefault(); signOut(); });
@@ -409,29 +415,35 @@ async function loadBillingPlans() {
 
   const res = await apiFetch('/api/billing/plans');
   if (!res || !res.ok) return;
-  const { plans, publishable_key } = await res.json();
+  const { plans, publishable_key, stripePublishableKey } = await res.json();
+  const pk = publishable_key || stripePublishableKey || '';
 
   const user = getUser();
   const currentPlan = user?.plan || 'free';
 
   document.getElementById('billing-plan-badge').textContent = currentPlan;
-  document.getElementById('billing-plan-name').textContent  = (currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)) + ' Plan';
+  const current = plans.find(p => p.id === currentPlan);
+  document.getElementById('billing-plan-name').textContent  = (current?.name || currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)) + ' Plan';
+  if (current?.description) {
+    document.getElementById('billing-plan-desc').textContent = current.description;
+  }
 
-  container.innerHTML = plans.map(p => planCard(p, currentPlan, publishable_key)).join('');
+  container.innerHTML = plans.filter(p => p.id !== 'free').map(p => planCard(p, currentPlan, pk)).join('');
 }
 
 function planCard(p, currentPlan, pk) {
   const isCurrent = p.id === currentPlan;
-  const btnLabel  = isCurrent ? 'Current plan' : (p.id === 'enterprise' ? 'Contact sales' : 'Upgrade');
+  const canCheckout = p.stripe_checkout !== false && p.id !== 'free';
+  const btnLabel  = isCurrent ? 'Current plan' : (p.cta || 'Upgrade');
   const btnClass  = isCurrent ? 'btn-sm-ghost' : 'btn-sm-primary';
-  const onclick   = isCurrent ? '' : (p.id === 'enterprise' ? `onclick="window.location='/contact.html'"` : `onclick="checkout('${p.id}')"`);
+  const onclick   = isCurrent || !canCheckout ? '' : `onclick="checkout('${p.id}')"`;
 
   return `<div class="pricing-card${p.popular ? ' popular' : ''}${isCurrent ? ' current' : ''}">
     ${p.popular ? '<div class="popular-tag">Most popular</div>' : ''}
     <div class="plan-name">${escHtml(p.name)}</div>
     <div class="price-row">
       <span class="price-amount">${p.price_display}</span>
-      ${p.id !== 'enterprise' ? '<span class="price-period">/month</span>' : ''}
+      ${p.id !== 'free' ? `<span class="price-period">${escHtml(p.price_period || '/month')}</span>` : '<span class="price-period">/month</span>'}
     </div>
     <p class="plan-desc">${escHtml(p.description)}</p>
     <ul class="plan-features">${(p.features || []).map(f => `<li>${escHtml(f)}</li>`).join('')}</ul>

@@ -2,6 +2,7 @@
 import time
 import pytest
 from tests.conftest import RAG_API, DOMAIN_CONFIGS, HEALTHCARE_MAPPING, PHARMACY_MAPPING, FINANCE_MAPPING
+from tests.helpers import poll_job, search_sync
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -24,16 +25,7 @@ def ingest_job(authed_api, tenant_id, mapping, strategy="rules"):
     assert r.status_code in (200, 201, 202), f"Job submit failed: {r.status_code} {r.text}"
     job = r.json()
     job_id = job.get("job_id") or job.get("id")
-
-    for _ in range(60):
-        r2 = authed_api.get(authed_api.url(f"{RAG_API}/jobs/{job_id}"))
-        status = r2.json().get("status", "")
-        if status == "done":
-            return r2.json()
-        if status == "failed":
-            pytest.fail(f"Job {job_id} failed: {r2.text}")
-        time.sleep(2)
-    pytest.fail(f"Job {job_id} timed out after 120s (still {status})")
+    return poll_job(authed_api, RAG_API, job_id)
 
 
 # ── Domain job fixtures ────────────────────────────────────────────────────────
@@ -55,16 +47,22 @@ def finance_job(authed_api, finance_tenant):
 
 class TestIngest:
     def test_healthcare_job_done(self, healthcare_job):
-        assert healthcare_job["status"] == "done"
-        assert healthcare_job.get("words_processed", 0) > 0
+        assert healthcare_job["status"] == "completed"
+        assert healthcare_job.get("records_written", 0) > 0
 
     def test_pharmacy_job_done(self, pharmacy_job):
-        assert pharmacy_job["status"] == "done"
-        assert pharmacy_job.get("words_processed", 0) > 0
+        assert pharmacy_job["status"] == "completed"
+        assert pharmacy_job.get("records_written", 0) > 0
 
     def test_finance_job_done(self, finance_job):
-        assert finance_job["status"] == "done"
-        assert finance_job.get("words_processed", 0) > 0
+        assert finance_job["status"] == "completed"
+        assert finance_job.get("records_written", 0) > 0
+
+    def test_list_tenants(self, authed_api, healthcare_tenant):
+        r = authed_api.get(authed_api.url(f"{RAG_API}/tenants"))
+        assert r.status_code == 200
+        ids = {t["tenant_id"] for t in r.json()}
+        assert healthcare_tenant in ids
 
     def test_communities_built_healthcare(self, authed_api, healthcare_tenant, healthcare_job):
         r = authed_api.get(authed_api.url(f"{RAG_API}/communities?tenant_id={healthcare_tenant}"))
@@ -120,58 +118,48 @@ class TestSearch:
         tenant_id = {"healthcare": healthcare_tenant,
                      "pharmacy":   pharmacy_tenant,
                      "finance":    finance_tenant}[domain]
-        r = authed_api.post(authed_api.url(f"{RAG_API}/search"), json={
-            "tenant_id": tenant_id, "query": query, "top_k": 5,
-        })
-        assert r.status_code == 200, f"Search failed: {r.text}"
-        results = r.json().get("results", [])
+        data = search_sync(authed_api, RAG_API, tenant_id, query, top_k=5)
+        results = data.get("results", [])
         assert len(results) > 0, f"No results for: {query}"
         top_cat = results[0].get("category_slug", "")
         if top_cat != expected_category:
             print(f"\n[WARN] domain={domain} expected={expected_category} got={top_cat}")
 
     def test_category_filter(self, authed_api, finance_tenant, finance_job):
-        r = authed_api.post(authed_api.url(f"{RAG_API}/search"), json={
-            "tenant_id": finance_tenant, "query": "portfolio analysis",
-            "top_k": 10, "category_filter": "risk",
-        })
-        assert r.status_code == 200
-        for res in r.json()["results"]:
+        data = search_sync(
+            authed_api, RAG_API, finance_tenant,
+            "portfolio analysis", top_k=10, category_filter="risk",
+        )
+        for res in data["results"]:
             assert res.get("category_slug") == "risk"
 
     def test_top_k_respected(self, authed_api, healthcare_tenant, healthcare_job):
         for k in [1, 3, 5]:
-            r = authed_api.post(authed_api.url(f"{RAG_API}/search"), json={
-                "tenant_id": healthcare_tenant, "query": "patient medication", "top_k": k,
-            })
-            assert r.status_code == 200
-            assert len(r.json()["results"]) <= k
+            data = search_sync(
+                authed_api, RAG_API, healthcare_tenant, "patient medication", top_k=k,
+            )
+            assert len(data["results"]) <= k
 
     def test_tenant_isolation(self, authed_api, healthcare_tenant, pharmacy_tenant,
                               healthcare_job, pharmacy_job):
         query = "diabetes insulin medication"
-        hc = authed_api.post(authed_api.url(f"{RAG_API}/search"),
-                             json={"tenant_id": healthcare_tenant, "query": query, "top_k": 3})
-        ph = authed_api.post(authed_api.url(f"{RAG_API}/search"),
-                             json={"tenant_id": pharmacy_tenant, "query": query, "top_k": 3})
-        hc_cats = [r["category_slug"] for r in hc.json()["results"]]
-        ph_cats = [r["category_slug"] for r in ph.json()["results"]]
+        hc = search_sync(authed_api, RAG_API, healthcare_tenant, query, top_k=3)
+        ph = search_sync(authed_api, RAG_API, pharmacy_tenant, query, top_k=3)
+        hc_cats = [r["category_slug"] for r in hc["results"]]
+        ph_cats = [r["category_slug"] for r in ph["results"]]
         assert hc_cats != ph_cats, "Tenants appear to share the same graph — isolation broken"
 
     def test_result_structure(self, authed_api, finance_tenant, finance_job):
-        r = authed_api.post(authed_api.url(f"{RAG_API}/search"),
-                            json={"tenant_id": finance_tenant, "query": "valuation", "top_k": 3})
-        assert r.status_code == 200
-        for res in r.json()["results"]:
+        data = search_sync(authed_api, RAG_API, finance_tenant, "valuation", top_k=3)
+        for res in data["results"]:
             assert "category_slug" in res
             assert "score" in res
             assert 0.0 <= res["score"] <= 1.0
 
     def test_search_latency_under_3s(self, authed_api, finance_tenant, finance_job):
         start = time.time()
-        r = authed_api.post(authed_api.url(f"{RAG_API}/search"),
-                            json={"tenant_id": finance_tenant, "query": "credit risk", "top_k": 5})
-        assert r.status_code == 200
+        data = search_sync(authed_api, RAG_API, finance_tenant, "credit risk", top_k=5)
+        assert data.get("results") is not None
         assert time.time() - start < 3.0, "Search exceeded 3s latency threshold"
 
     def test_empty_query_rejected(self, authed_api, healthcare_tenant):
@@ -203,11 +191,9 @@ class TestBridgeVectors:
         assert "bridge_id" in bridge or "id" in bridge
 
     def test_bridge_searchable(self, authed_api, healthcare_tenant, bridge, healthcare_job):
-        r = authed_api.post(authed_api.url(f"{RAG_API}/search"), json={
-            "tenant_id": healthcare_tenant,
-            "query":     "diagnosis and treatment pathway",
-            "top_k":     10,
-        })
-        assert r.status_code == 200
-        categories = {res["category_slug"] for res in r.json()["results"]}
+        data = search_sync(
+            authed_api, RAG_API, healthcare_tenant,
+            "diagnosis and treatment pathway", top_k=10,
+        )
+        categories = {res["category_slug"] for res in data["results"]}
         assert len(categories) >= 2, "Bridge search should span multiple categories"

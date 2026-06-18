@@ -19,6 +19,8 @@ import uuid
 import pytest
 import requests
 
+from tests.helpers import login as _login
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 def pytest_addoption(parser):
@@ -56,24 +58,18 @@ def qa_credentials():
 @pytest.fixture(scope="session")
 def auth_token(api, qa_credentials):
     """Register and return a valid JWT. Cached for the full session."""
-    # Register
     r = api.post(api.url("/api/v1/auth/register"), json={
-        "email":    qa_credentials["email"],
-        "password": qa_credentials["password"],
-        "name":     qa_credentials["name"],
+        "email":     qa_credentials["email"],
+        "password":  qa_credentials["password"],
+        "full_name": qa_credentials["name"],
     })
     if r.status_code == 409:
         pass  # user already exists — proceed to login
     elif r.status_code not in (200, 201):
         pytest.fail(f"Register failed: {r.status_code} {r.text}")
 
-    # Login
-    r = api.post(api.url("/api/v1/auth/login"), json={
-        "email":    qa_credentials["email"],
-        "password": qa_credentials["password"],
-    })
-    assert r.status_code == 200, f"Login failed: {r.status_code} {r.text}"
-    token = r.json()["access_token"]
+    data = _login(api, qa_credentials["email"], qa_credentials["password"])
+    token = data["token"]
     api.headers["Authorization"] = f"Bearer {token}"
     return token
 
@@ -85,9 +81,20 @@ def authed_api(api, auth_token):
 # ── Domain tenant fixtures ────────────────────────────────────────────────────
 
 # ── API path prefixes (matches actual router definitions) ─────────────────────
-AUTH_API  = "/api/v1/auth"
-RAG_API   = "/api/v1/prismrag"
-DELIB_API = "/api/v1/deliberation"
+AUTH_API    = "/api/v1/auth"
+RAG_API     = "/api/v1/prismrag"
+DELIB_API   = "/api/v1/deliberation"
+BILLING_API = "/api/v1/billing"
+STATUS_API  = "/api/v1/status"
+TENANT_API  = "/api/v1/tenants"
+
+
+@pytest.fixture(scope="session")
+def stripe_configured():
+    key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not key or key.startswith("PASTE_"):
+        pytest.skip("STRIPE_SECRET_KEY not configured in .env")
+    return True
 
 
 @pytest.fixture(scope="session")

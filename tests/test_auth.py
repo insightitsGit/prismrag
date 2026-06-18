@@ -14,7 +14,7 @@ class TestAuth:
         r = api.post(api.url(f"{AUTH_API}/register"), json={
             "email": "not-an-email",
             "password": "ValidPass!1",
-            "name": "Test",
+            "full_name": "Test",
         })
         assert r.status_code == 422
 
@@ -22,7 +22,7 @@ class TestAuth:
         r = api.post(api.url(f"{AUTH_API}/register"), json={
             "email": f"test-{uuid.uuid4().hex[:6]}@qa.io",
             "password": "abc",
-            "name": "Test",
+            "full_name": "Test",
         })
         assert r.status_code == 422
 
@@ -52,8 +52,21 @@ class TestAuth:
         r = api.get(api.url(f"{AUTH_API}/me"), headers={"Authorization": "Bearer fake.token.here"})
         assert r.status_code == 401
 
+    def test_usage(self, authed_api):
+        r = authed_api.get(authed_api.url(f"{AUTH_API}/usage"))
+        assert r.status_code == 200
+        data = r.json()
+        assert "chunks_used" in data
+        assert "plan" in data
+
+    def test_mfa_status(self, authed_api):
+        r = authed_api.get(authed_api.url(f"{AUTH_API}/mfa/status"))
+        assert r.status_code == 200
+        data = r.json()
+        assert "mfa_enabled" in data
+
     def test_create_api_key(self, authed_api):
-        r = authed_api.post(authed_api.url(f"{AUTH_API}/api-keys"), json={"name": "QA test key"})
+        r = authed_api.post(authed_api.url(f"{AUTH_API}/api-keys?label=QA+test"))
         assert r.status_code in (200, 201)
         data = r.json()
         assert "raw_key" in data
@@ -65,13 +78,32 @@ class TestAuth:
         assert isinstance(r.json(), list)
 
     def test_api_key_auth(self, authed_api, api):
-        r = authed_api.post(authed_api.url(f"{AUTH_API}/api-keys"), json={"name": "key-auth-test"})
+        r = authed_api.post(authed_api.url(f"{AUTH_API}/api-keys?label=key-auth-test"))
         raw = r.json()["raw_key"]
         r2 = api.get(api.url(f"{AUTH_API}/me"), headers={"Authorization": f"Bearer {raw}"})
         assert r2.status_code == 200
 
     def test_revoke_api_key(self, authed_api):
-        r = authed_api.post(authed_api.url(f"{AUTH_API}/api-keys"), json={"name": "revoke-me"})
-        key_id = r.json()["id"]
+        authed_api.post(authed_api.url(f"{AUTH_API}/api-keys?label=revoke-me"))
+        listed = authed_api.get(authed_api.url(f"{AUTH_API}/api-keys")).json()
+        assert listed, "Expected at least one API key"
+        key_id = listed[0]["id"]
         r2 = authed_api.delete(authed_api.url(f"{AUTH_API}/api-keys/{key_id}"))
         assert r2.status_code in (200, 204)
+
+    def test_password_forgot_always_ok(self, api, qa_credentials):
+        r = api.post(api.url(f"{AUTH_API}/password/forgot"), json={
+            "email": qa_credentials["email"],
+        })
+        assert r.status_code == 200
+        assert r.json().get("sent") is True
+
+    def test_oidc_status(self, api):
+        r = api.get(api.url(f"{AUTH_API}/oidc/status"))
+        assert r.status_code == 200
+        assert "enabled" in r.json()
+
+    def test_regions(self, api):
+        r = api.get(api.url(f"{AUTH_API}/regions"))
+        assert r.status_code == 200
+        assert "regions" in r.json()

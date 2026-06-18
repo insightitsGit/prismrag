@@ -61,7 +61,7 @@
       { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "5,000 chunks/month" },
       { "@type": "Offer", "name": "Starter", "price": "49", "priceCurrency": "USD", "billingIncrement": "month" },
       { "@type": "Offer", "name": "Professional", "price": "199", "priceCurrency": "USD", "billingIncrement": "month" },
-      { "@type": "Offer", "name": "Enterprise", "price": "0", "priceCurrency": "USD", "description": "Custom pricing" }
+      { "@type": "Offer", "name": "Enterprise", "price": "499", "priceCurrency": "USD", "billingIncrement": "month" }
     ],
     "featureList": [
       "Client-defined knowledge graph mapping",
@@ -151,7 +151,7 @@
         "name": "How is pricing structured?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "PrismRAG (knowledge graph): Free $0 (5,000 chunks), Starter $49/mo (50,000 chunks), Professional $199/mo (500,000 chunks + MLP training + bridge vectors), Enterprise custom. Deliberation: Free $0 (5 deliberations), Starter $29/mo (50 deliberations), Professional $99/mo (500 deliberations), Enterprise custom. Overage: $0.25 per deliberation. Both products are available together on all paid plans."
+          "text": "PrismRAG (knowledge graph): Free $0/mo (5,000 chunks), Starter $49/mo (50,000 chunks), Professional $199/mo (500,000 chunks + MLP + bridge vectors), Enterprise $499/mo (unlimited). Deliberation is included: 5 / 50 / 500 / unlimited sessions per month by tier. Overage: $0.25 per deliberation. All paid plans are monthly subscriptions."
         }
       }
     ]
@@ -790,14 +790,14 @@
         <p class="plan-desc">For teams building their first pipeline</p>
         <ul class="plan-features">
           <li><span class="check">✓</span> 50,000 chunks / month</li>
-          <li><span class="check">✓</span> 1 workspace · 3 mappings</li>
+          <li><span class="check">✓</span> 3 workspaces · 3 mappings</li>
           <li><span class="check">✓</span> CSV / Excel / API ingestion</li>
           <li><span class="check">✓</span> Graph RAG retrieval</li>
           <li><span class="check dim">–</span> Tier-2 MLP training</li>
           <li><span class="check dim">–</span> Bridge vectors</li>
           <li><span class="check">✓</span> Email support</li>
         </ul>
-        <a href="/register.html?plan=starter" class="plan-btn ghost">Get started</a>
+        <a href="/register.html?plan=starter" class="plan-btn ghost" data-plan="starter">Get started</a>
       </div>
 
       <div class="pricing-card popular">
@@ -807,29 +807,29 @@
         <p class="plan-desc">Full ML stack for production deployments</p>
         <ul class="plan-features">
           <li><span class="check">✓</span> 500,000 chunks / month</li>
-          <li><span class="check">✓</span> 10 workspaces · 20 mappings</li>
+          <li><span class="check">✓</span> 20 workspaces · 20 mappings</li>
           <li><span class="check">✓</span> All ingestion sources</li>
           <li><span class="check">✓</span> Tier-2 MLP training</li>
           <li><span class="check">✓</span> Graph RAG + Bridge vectors</li>
           <li><span class="check">✓</span> Webhook callbacks</li>
           <li><span class="check">✓</span> Priority support</li>
         </ul>
-        <a href="/register.html?plan=professional" class="plan-btn primary">Start Professional</a>
+        <a href="/register.html?plan=professional" class="plan-btn primary" data-plan="professional">Start Professional</a>
       </div>
 
       <div class="pricing-card">
         <div class="plan-name">Enterprise</div>
-        <div class="plan-price"><span class="price-amount">Custom</span></div>
-        <p class="plan-desc">Unlimited scale, dedicated infrastructure</p>
+        <div class="plan-price"><span class="price-amount">$499</span><span class="price-period">/month</span></div>
+        <p class="plan-desc">Unlimited scale, SCIM SSO, CMEK, and dedicated support</p>
         <ul class="plan-features">
           <li><span class="check">✓</span> Unlimited chunks</li>
           <li><span class="check">✓</span> Unlimited workspaces</li>
-          <li><span class="check">✓</span> All features + custom model training</li>
-          <li><span class="check">✓</span> Dedicated infrastructure</li>
+          <li><span class="check">✓</span> SCIM SSO + CMEK</li>
           <li><span class="check">✓</span> 99.9% SLA</li>
           <li><span class="check">✓</span> Dedicated support engineer</li>
         </ul>
-        <a href="mailto:sales@prismrag.io?subject=Enterprise%20Inquiry" class="plan-btn ghost">Contact sales</a>
+        <a href="/register.html?plan=enterprise" class="plan-btn ghost" data-plan="enterprise">Start Enterprise</a>
+        <p style="font-size:12px;color:#666;margin-top:12px;">Need custom terms? <a href="mailto:sales@prismrag.io?subject=Enterprise%20Inquiry" style="color:#6c63ff;">Contact sales</a></p>
       </div>
     </div>
 
@@ -878,7 +878,7 @@
 
       <div class="delib-pricing-card">
         <div class="dp-plan">Enterprise</div>
-        <div class="dp-price">Custom</div>
+        <div class="dp-price">Included<span>/month</span></div>
         <div class="dp-delibs">Unlimited deliberations</div>
         <ul class="dp-features">
           <li>Unlimited domains</li>
@@ -886,7 +886,7 @@
           <li>Private MCP endpoint</li>
           <li>Dedicated support</li>
         </ul>
-        <a href="mailto:sales@prismrag.io?subject=Deliberation%20Enterprise" class="dp-btn">Contact sales</a>
+        <a href="/register.html?plan=enterprise" class="dp-btn" data-plan="enterprise">Start Enterprise</a>
       </div>
     </div>
 
@@ -895,7 +895,7 @@
       <div style="font-size:28px;">💡</div>
       <div>
         <div style="font-size:15px;font-weight:700;color:#e8e8f0;margin-bottom:4px;">Bundle both products</div>
-        <div style="font-size:13px;color:#888;">Professional PrismRAG ($199/mo) + Professional Deliberation ($99/mo) = <strong style="color:#6c63ff;">$298/mo</strong> for the full enterprise knowledge + reasoning platform. Contact sales for bundle discounts on annual plans.</div>
+        <div style="font-size:13px;color:#888;">All paid plans are <strong>monthly subscriptions</strong>. PrismRAG + Deliberation are bundled per tier — Starter $49/mo, Professional $199/mo, Enterprise $499/mo. Contact sales for annual billing discounts.</div>
       </div>
     </div>
   </div>

@@ -107,7 +107,7 @@ def health():
             "free":         {"monthly_deliberations": 5,   "price": "$0"},
             "starter":      {"monthly_deliberations": 50,  "price": "$29/mo"},
             "professional": {"monthly_deliberations": 500, "price": "$99/mo"},
-            "enterprise":   {"monthly_deliberations": "unlimited", "price": "custom"},
+            "enterprise":   {"monthly_deliberations": "unlimited", "price": "included in $499/mo"},
             "pay_as_you_go": f"${DELIBERATION_OVERAGE_PRICE_USD:.2f} per deliberation",
         },
     }

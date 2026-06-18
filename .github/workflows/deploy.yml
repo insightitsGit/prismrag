@@ -1,7 +1,15 @@
 name: Build & Deploy to Azure
 
-# Every push to main runs lint + build (images always current in ACR).
-# Deploy to Azure ONLY when commit message contains [publish] or run is triggered manually.
+# ── CI/CD behavior (read before pushing to main) ─────────────────────────────
+# Every push to main ALWAYS runs:  Lint → Build & Push (Docker images to ACR)
+#
+# Azure deploy runs ONLY when:
+#   1. Commit message contains the literal tag [publish], e.g.
+#        git commit -m "fix(api): wire billing [publish]"
+#   2. OR you manually run the workflow (Actions → Build & Deploy → Run workflow)
+#
+# Pushes without [publish] update ACR images but do NOT touch Container Apps.
+# Use [publish] when infra/deploy-container-app.sh or secrets/env need to reach prod.
 
 on:
   push:
@@ -17,11 +25,10 @@ env:
   ACR_LOGIN_SERVER: prismragacr.azurecr.io
   RESOURCE_GROUP: prismrag-rg
   LOCATION: eastus2
-  # User-assigned managed identity that has AcrPull on prismragacr
+  CONTAINER_ENV: prismrag-env
   PULL_IDENTITY_NAME: prismrag-pull-id
 
 jobs:
-  # ── 1. Lint ───────────────────────────────────────────────────────────────
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -43,7 +50,6 @@ jobs:
           JWT_SECRET: ci-placeholder
           GEMINI_API_KEY: ci-placeholder
 
-  # ── 2. Build & push Docker images (every push) ───────────────────────────
   build:
     name: Build & Push
     runs-on: ubuntu-latest
@@ -63,8 +69,7 @@ jobs:
             echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Log in to ACR
         uses: docker/login-action@v3
@@ -99,12 +104,25 @@ jobs:
           cache-from: type=gha,scope=worker
           cache-to: type=gha,mode=max,scope=worker
 
-  # ── 3. Deploy — only when commit message contains [publish] ──────────────
+      - name: Deploy gate notice
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "::notice::Manual run — Deploy to Azure will run after this build."
+          elif echo "$MSG" | grep -q '\[publish\]'; then
+            echo "::notice::Commit contains [publish] — Deploy to Azure will run after this build."
+          else
+            echo "::notice::No [publish] in commit message — Lint + Build only. Images pushed to ACR; Container Apps unchanged."
+            echo "         To deploy: git commit -m \"your message [publish]\" or use workflow_dispatch."
+          fi
+
+  # Skipped unless commit message contains [publish] or workflow_dispatch (see header).
   deploy:
     name: Deploy to Azure
     runs-on: ubuntu-latest
     needs: build
     environment: production
+    # Gate: must include [publish] in commit message OR be a manual workflow_dispatch run.
     if: >
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.head_commit.message, '[publish]')
@@ -117,7 +135,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # ── Resolve the managed identity resource ID (pre-created, has AcrPull)
       - name: Resolve pull identity
         id: identity
         run: |
@@ -127,7 +144,6 @@ jobs:
             --query id -o tsv)
           echo "id=${ID}" >> $GITHUB_OUTPUT
 
-      # ── Deploy infrastructure (env, logs, optional postgres/redis)
       - name: Deploy infrastructure (Bicep)
         run: |
           az deployment group create \
@@ -137,9 +153,11 @@ jobs:
             --mode Incremental \
             --output none
 
-      # ── Deploy / update API container app
-      - name: Deploy API
+      - name: Deploy API container app
         env:
+          APP_NAME: prismrag-api
+          IMAGE: ${{ env.ACR_LOGIN_SERVER }}/prismrag-api:${{ needs.build.outputs.image_tag }}
+          IDENTITY_ID: ${{ steps.identity.outputs.id }}
           DB_DSN: ${{ secrets.DB_CONNECTION_STRING }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -147,58 +165,24 @@ jobs:
           STRIPE_WH: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           SB_CONN: ${{ secrets.SERVICE_BUS_CONN_STR }}
           ACS_CONN: ${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}
-          TAG: ${{ needs.build.outputs.image_tag }}
-          IDENTITY_ID: ${{ steps.identity.outputs.id }}
-        run: |
-          NC="not-configured"
-          DB="${DB_DSN:-$NC}" SK="${STRIPE_SK:-$NC}" WH="${STRIPE_WH:-$NC}"
-          SB="${SB_CONN:-$NC}" AC="${ACS_CONN:-$NC}"
+          STRIPE_PRICE_STARTER: ${{ secrets.STRIPE_PRICE_STARTER }}
+          STRIPE_PRICE_PROFESSIONAL: ${{ secrets.STRIPE_PRICE_PROF }}
+          STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
+          PRISMRAG_EMAIL_FROM: ${{ secrets.PRISMRAG_EMAIL_FROM }}
+          PRISMRAG_BASE_URL: ${{ secrets.PRISMRAG_BASE_URL }}
+          INGRESS: external
+          TARGET_PORT: "8001"
+          MIN_REPLICAS: "1"
+          MAX_REPLICAS: "20"
+          CPU: "0.5"
+          MEMORY: "1Gi"
+        run: bash infra/deploy-container-app.sh
 
-          SECRETS="db-dsn=${DB} jwt-secret=${JWT_SECRET} gemini-key=${GEMINI_API_KEY} \
-            stripe-secret=${SK} stripe-webhook=${WH} \
-            redis-url=${NC} servicebus-conn=${SB} acs-conn=${AC}"
-
-          ENV_VARS="PRISMRAG_DB_DSN=secretref:db-dsn \
-            REDIS_URL=secretref:redis-url \
-            JWT_SECRET=secretref:jwt-secret \
-            GEMINI_API_KEY=secretref:gemini-key \
-            STRIPE_SECRET_KEY=secretref:stripe-secret \
-            STRIPE_WEBHOOK_SECRET=secretref:stripe-webhook \
-            AZURE_SERVICE_BUS_CONNECTION_STRING=secretref:servicebus-conn \
-            AZURE_COMMUNICATION_CONNECTION_STRING=secretref:acs-conn \
-            STRIPE_PRICE_STARTER=${{ secrets.STRIPE_PRICE_STARTER || 'not-configured' }} \
-            STRIPE_PRICE_PROFESSIONAL=${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }} \
-            STRIPE_PRICE_ENTERPRISE=${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }} \
-            PRISMRAG_ENV=production \
-            PRISMRAG_EMAIL_ENABLED=true \
-            PRISMRAG_EMAIL_FROM=${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }} \
-            PRISMRAG_BASE_URL=${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}"
-
-          # Try create (first deploy); on conflict update image + secrets
-          az containerapp create \
-            --name prismrag-api \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --environment prismrag-env \
-            --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-api:${TAG}" \
-            --registry-server "${{ env.ACR_LOGIN_SERVER }}" \
-            --registry-identity "${IDENTITY_ID}" \
-            --user-assigned "${IDENTITY_ID}" \
-            --target-port 8001 --ingress external \
-            --min-replicas 1 --max-replicas 20 \
-            --cpu 0.5 --memory 1Gi \
-            --secrets $SECRETS \
-            --env-vars $ENV_VARS \
-            --output none \
-          2>/dev/null || \
-          az containerapp update \
-            --name prismrag-api \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-api:${TAG}" \
-            --output none
-
-      # ── Deploy / update Worker container app
-      - name: Deploy Worker
+      - name: Deploy Worker container app
         env:
+          APP_NAME: prismrag-worker
+          IMAGE: ${{ env.ACR_LOGIN_SERVER }}/prismrag-worker:${{ needs.build.outputs.image_tag }}
+          IDENTITY_ID: ${{ steps.identity.outputs.id }}
           DB_DSN: ${{ secrets.DB_CONNECTION_STRING }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -206,54 +190,17 @@ jobs:
           STRIPE_WH: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           SB_CONN: ${{ secrets.SERVICE_BUS_CONN_STR }}
           ACS_CONN: ${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}
-          TAG: ${{ needs.build.outputs.image_tag }}
-          IDENTITY_ID: ${{ steps.identity.outputs.id }}
-        run: |
-          NC="not-configured"
-          DB="${DB_DSN:-$NC}" SK="${STRIPE_SK:-$NC}" WH="${STRIPE_WH:-$NC}"
-          SB="${SB_CONN:-$NC}" AC="${ACS_CONN:-$NC}"
+          STRIPE_PRICE_STARTER: ${{ secrets.STRIPE_PRICE_STARTER }}
+          STRIPE_PRICE_PROFESSIONAL: ${{ secrets.STRIPE_PRICE_PROF }}
+          STRIPE_PRICE_ENTERPRISE: ${{ secrets.STRIPE_PRICE_ENTERPRISE }}
+          PRISMRAG_EMAIL_FROM: ${{ secrets.PRISMRAG_EMAIL_FROM }}
+          PRISMRAG_BASE_URL: ${{ secrets.PRISMRAG_BASE_URL }}
+          MIN_REPLICAS: "0"
+          MAX_REPLICAS: "10"
+          CPU: "1.0"
+          MEMORY: "2Gi"
+        run: bash infra/deploy-container-app.sh
 
-          SECRETS="db-dsn=${DB} jwt-secret=${JWT_SECRET} gemini-key=${GEMINI_API_KEY} \
-            stripe-secret=${SK} stripe-webhook=${WH} \
-            redis-url=${NC} servicebus-conn=${SB} acs-conn=${AC}"
-
-          ENV_VARS="PRISMRAG_DB_DSN=secretref:db-dsn \
-            REDIS_URL=secretref:redis-url \
-            JWT_SECRET=secretref:jwt-secret \
-            GEMINI_API_KEY=secretref:gemini-key \
-            STRIPE_SECRET_KEY=secretref:stripe-secret \
-            STRIPE_WEBHOOK_SECRET=secretref:stripe-webhook \
-            AZURE_SERVICE_BUS_CONNECTION_STRING=secretref:servicebus-conn \
-            AZURE_COMMUNICATION_CONNECTION_STRING=secretref:acs-conn \
-            STRIPE_PRICE_STARTER=${{ secrets.STRIPE_PRICE_STARTER || 'not-configured' }} \
-            STRIPE_PRICE_PROFESSIONAL=${{ secrets.STRIPE_PRICE_PROF || 'not-configured' }} \
-            STRIPE_PRICE_ENTERPRISE=${{ secrets.STRIPE_PRICE_ENTERPRISE || 'not-configured' }} \
-            PRISMRAG_ENV=production \
-            PRISMRAG_EMAIL_ENABLED=true \
-            PRISMRAG_EMAIL_FROM=${{ secrets.PRISMRAG_EMAIL_FROM || 'PrismRAG@insightits.com' }} \
-            PRISMRAG_BASE_URL=${{ secrets.PRISMRAG_BASE_URL || 'https://prismrag.insightits.com' }}"
-
-          az containerapp create \
-            --name prismrag-worker \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --environment prismrag-env \
-            --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-worker:${TAG}" \
-            --registry-server "${{ env.ACR_LOGIN_SERVER }}" \
-            --registry-identity "${IDENTITY_ID}" \
-            --user-assigned "${IDENTITY_ID}" \
-            --min-replicas 0 --max-replicas 10 \
-            --cpu 1.0 --memory 2Gi \
-            --secrets $SECRETS \
-            --env-vars $ENV_VARS \
-            --output none \
-          2>/dev/null || \
-          az containerapp update \
-            --name prismrag-worker \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image "${{ env.ACR_LOGIN_SERVER }}/prismrag-worker:${TAG}" \
-            --output none
-
-      # ── Health check
       - name: Wait for API health
         run: |
           API_URL=$(az containerapp show \
