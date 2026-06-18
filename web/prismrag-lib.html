@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PrismRAG Patch — Stop AI Hallucination in Any Vector Database</title>
+  <meta name="description" content="A Python library that patches pgvector, ChromaDB, Pinecone, or Weaviate with PrismRAG's hallucination-resistant retrieval. Drop-in, 5-line integration. $2,000/year per company."/>
+  <meta name="keywords" content="AI hallucination, pgvector patch, ChromaDB hallucination, vector database, RAG hallucination fix, Python library, AI grounding"/>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#0a0c14; --bg2:#0f1117; --surface:#141720; --surface2:#1a1d2e;
+      --border:#252840; --accent:#7c6af7; --teal:#2dd4bf; --green:#48bb78;
+      --red:#fc8181; --yellow:#ecc94b; --text:#e2e8f0; --muted:#8892a4;
+      --radius:12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+    /* ── Nav ── */
+    nav { display:flex; align-items:center; height:56px; padding:0 36px; gap:24px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; }
+    nav .logo { font-weight:800; font-size:.95rem; color:var(--accent); margin-right:auto; text-decoration:none; }
+    nav a { color:var(--muted); text-decoration:none; font-size:.8125rem; }
+    nav a:hover { color:var(--text); }
+    nav .btn-nav { padding:7px 18px; background:var(--accent); color:#fff; border-radius:8px; font-weight:600; font-size:.8125rem; text-decoration:none; }
+
+    /* ── Hero ── */
+    .hero { padding:100px 24px 80px; text-align:center; background:linear-gradient(180deg,#0a0c14 0%,#0d0b1a 100%); }
+    .hero-label { display:inline-block; background:rgba(45,212,191,.1); border:1px solid rgba(45,212,191,.25); color:var(--teal); border-radius:100px; padding:4px 16px; font-size:.75rem; font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-bottom:24px; }
+    .hero h1 { font-size:clamp(2rem,5vw,3.25rem); font-weight:800; line-height:1.15; margin-bottom:20px; }
+    .hero h1 span { background:linear-gradient(135deg,#7c6af7,#2dd4bf); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero-sub { max-width:620px; margin:0 auto 40px; color:var(--muted); font-size:1.05rem; line-height:1.7; }
+    .hero-actions { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-bottom:56px; }
+    .btn-primary { display:inline-flex; align-items:center; gap:8px; padding:14px 32px; background:var(--accent); color:#fff; border-radius:10px; font-weight:700; font-size:.9375rem; text-decoration:none; }
+    .btn-primary:hover { background:#6a59e0; }
+    .btn-ghost { display:inline-flex; align-items:center; gap:8px; padding:14px 32px; border:1.5px solid var(--border); color:var(--muted); border-radius:10px; font-weight:600; font-size:.9375rem; text-decoration:none; }
+    .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* ── Code block ── */
+    .code-hero { max-width:720px; margin:0 auto; text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    .code-hero-header { padding:12px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+    .code-hero-header span { font-size:.75rem; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+    .dot { width:10px; height:10px; border-radius:50%; }
+    pre { padding:24px; font-family:'JetBrains Mono',monospace; font-size:.825rem; line-height:1.7; overflow-x:auto; color:#c9d1d9; }
+    .c-comment { color:#6a7384; }
+    .c-kw { color:#7c6af7; font-weight:600; }
+    .c-str { color:#2dd4bf; }
+    .c-key { color:#e2e8f0; }
+    .c-num { color:#ecc94b; }
+
+    /* ── Sections ── */
+    .section { padding:88px 24px; }
+    .section.dark { background:var(--bg2); }
+    .container { max-width:1080px; margin:0 auto; }
+    .section-label { font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:12px; }
+    .section-h2 { font-size:clamp(1.5rem,3vw,2.25rem); font-weight:800; margin-bottom:12px; }
+    .section-sub { color:var(--muted); max-width:600px; margin-bottom:48px; font-size:.9375rem; line-height:1.7; }
+
+    /* ── 3-step how-it-works ── */
+    .steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; }
+    .step { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; }
+    .step-num { font-size:.7rem; font-weight:700; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; margin-bottom:12px; }
+    .step h3 { font-size:1rem; font-weight:700; margin-bottom:8px; }
+    .step p { font-size:.875rem; color:var(--muted); line-height:1.65; }
+    .step-tag { display:inline-block; margin-top:14px; font-size:.7rem; font-weight:600; padding:3px 10px; border-radius:100px; background:rgba(124,106,247,.12); color:var(--accent); }
+
+    /* ── Adapters grid ── */
+    .adapters { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top:40px; }
+    .adapter-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:24px; }
+    .adapter-card h3 { font-size:.9375rem; font-weight:700; margin-bottom:6px; }
+    .adapter-card p { font-size:.8125rem; color:var(--muted); line-height:1.6; }
+    .adapter-badge { display:inline-block; margin-top:12px; font-size:.7rem; font-weight:700; padding:2px 10px; border-radius:100px; }
+    .badge-green { background:rgba(72,187,120,.1); color:var(--green); border:1px solid rgba(72,187,120,.25); }
+    .badge-yellow { background:rgba(236,201,75,.1); color:var(--yellow); border:1px solid rgba(236,201,75,.25); }
+
+    /* ── Compare ── */
+    .compare { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:40px; }
+    @media(max-width:640px){ .compare { grid-template-columns:1fr; } }
+    .compare-card { padding:28px; border-radius:var(--radius); }
+    .compare-card.bad  { background:rgba(252,129,129,.04); border:1px solid rgba(252,129,129,.18); }
+    .compare-card.good { background:rgba(72,187,120,.04); border:1px solid rgba(72,187,120,.2); }
+    .compare-card h4 { font-size:.9375rem; font-weight:700; margin-bottom:14px; }
+    .compare-card.bad h4 { color:var(--red); }
+    .compare-card.good h4 { color:var(--green); }
+    .compare-card ul { padding-left:18px; color:var(--muted); font-size:.875rem; line-height:1.9; }
+
+    /* ── Pricing ── */
+    .pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; margin-top:40px; }
+    .plan { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:32px 28px; position:relative; }
+    .plan.popular { border-color:rgba(124,106,247,.5); background:rgba(124,106,247,.05); }
+    .popular-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; font-size:.7rem; font-weight:700; padding:3px 14px; border-radius:100px; white-space:nowrap; }
+    .plan-name { font-size:.8rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:16px; }
+    .plan-price { font-size:2.25rem; font-weight:800; margin-bottom:4px; }
+    .plan-price sub { font-size:.875rem; font-weight:400; color:var(--muted); }
+    .plan-period { font-size:.8125rem; color:var(--muted); margin-bottom:20px; }
+    .plan-features { list-style:none; margin:0 0 24px; padding:0; }
+    .plan-features li { font-size:.875rem; color:var(--muted); padding:5px 0; display:flex; gap:8px; align-items:flex-start; }
+    .plan-features li::before { content:"✓"; color:var(--accent); font-weight:700; flex-shrink:0; }
+    .plan-btn { display:block; text-align:center; padding:12px; border-radius:9px; font-weight:700; font-size:.875rem; text-decoration:none; }
+    .plan-btn.primary { background:var(--accent); color:#fff; }
+    .plan-btn.primary:hover { background:#6a59e0; }
+    .plan-btn.ghost { border:1.5px solid var(--border); color:var(--muted); }
+    .plan-btn.ghost:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* ── FAQ ── */
+    .faq-list { margin-top:32px; }
+    .faq-item { border-bottom:1px solid var(--border); padding:20px 0; }
+    .faq-q { font-size:.9375rem; font-weight:600; margin-bottom:8px; }
+    .faq-a { font-size:.875rem; color:var(--muted); line-height:1.7; }
+    code { background:rgba(124,106,247,.1); color:var(--accent); padding:1px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:.85em; }
+
+    /* ── CTA ── */
+    .cta { padding:80px 24px; text-align:center; background:linear-gradient(135deg,rgba(124,106,247,.08),rgba(45,212,191,.06)); border-top:1px solid var(--border); }
+    .cta h2 { font-size:clamp(1.5rem,3vw,2rem); font-weight:800; margin-bottom:12px; }
+    .cta p { color:var(--muted); margin-bottom:32px; }
+
+    /* ── Footer ── */
+    footer { padding:32px 24px; border-top:1px solid var(--border); text-align:center; color:var(--muted); font-size:.8125rem; }
+    footer a { color:var(--muted); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">⬡ PrismRAG</a>
+  <a href="/">Home</a>
+  <a href="#how-it-works">How it works</a>
+  <a href="#adapters">Adapters</a>
+  <a href="#pricing">Pricing</a>
+  <a href="/docs">API</a>
+  <a href="#pricing" class="btn-nav">Get a license →</a>
+</nav>
+
+<!-- ── HERO ────────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-label">Python Library · Drop-in patch</div>
+  <h1>
+    Stop hallucination<br/>
+    <span>in your own vector database.</span>
+  </h1>
+  <p class="hero-sub">
+    5 lines of code. Your pgvector, ChromaDB, Pinecone, or Weaviate database — no migration, no new infrastructure, no data leaves your environment.
+    PrismRAG Patch re-maps every vector through your verified rules before it's stored and before it's searched.
+  </p>
+  <div class="hero-actions">
+    <a href="#pricing" class="btn-primary">Get a license — $167/month</a>
+    <a href="#how-it-works" class="btn-ghost">See how it works</a>
+  </div>
+
+  <div class="code-hero">
+    <div class="code-hero-header">
+      <div class="dot" style="background:#fc8181"></div>
+      <div class="dot" style="background:#ecc94b"></div>
+      <div class="dot" style="background:#48bb78"></div>
+      <span style="margin-left:8px;">your_existing_rag.py — before &amp; after</span>
+    </div>
+    <pre><span class="c-comment"># ── BEFORE: standard pgvector (hallucination risk) ──────────</span>
+cursor.execute(<span class="c-str">"INSERT INTO docs (embedding) VALUES (%s)"</span>, [my_vector])
+
+<span class="c-comment"># ── AFTER: PrismRAG Patch (5 lines to add) ──────────────────</span>
+<span class="c-kw">from</span> prismrag_patch <span class="c-kw">import</span> PrismRAGPatch
+<span class="c-kw">from</span> prismrag_patch.adapters.pgvector <span class="c-kw">import</span> PgvectorAdapter
+
+patch   = PrismRAGPatch(license_key=<span class="c-str">"prlib_your_key"</span>, mapping=your_mapping)
+adapter = PgvectorAdapter(patch, connection=your_conn)
+
+adapter.insert(text=<span class="c-str">"Patient has fever"</span>, vector=my_vector)   <span class="c-comment"># ← remapped</span>
+results = adapter.search(<span class="c-str">"fever symptoms"</span>, query_vector=q_vec)  <span class="c-comment"># ← grounded</span></pre>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ─────────────────────────────────────────────────────────── -->
+<section class="section dark" id="how-it-works">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <h2 class="section-h2">Three steps. Zero infrastructure change.</h2>
+    <p class="section-sub">PrismRAG Patch wraps your existing database client. Your data never leaves your environment.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">Step 01</div>
+        <h3>Define your mapping</h3>
+        <p>Write a category + rules dict in Python — exactly like you'd write a taxonomy. "fever" → symptoms. "antibiotics" → treatment. Your domain expertise, your rules.</p>
+        <span class="step-tag">Tier 1 · Deterministic</span>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 02</div>
+        <h3>Wrap your DB client</h3>
+        <p>Pass your existing connection or collection to a PrismRAG adapter. No schema changes. No data migration. One import and two lines of code.</p>
+        <span class="step-tag">Drop-in · Same API</span>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 03</div>
+        <h3>Every vector is re-mapped</h3>
+        <p>On insert: each embedding is blended with your category signal before storage. On search: the query vector is re-mapped identically so it stays in the same space. Same-category chunks cluster together — wrong chunks no longer surface.</p>
+        <span class="step-tag">Auditable · Reproducible</span>
+      </div>
+    </div>
+
+    <div class="compare" style="margin-top:56px;">
+      <div class="compare-card bad">
+        <h4>✗ Without PrismRAG Patch</h4>
+        <ul>
+          <li>"bank" near "river" in old docs surfaces for finance queries</li>
+          <li>Statistical co-occurrence decides what's related</li>
+          <li>Agent gets wrong chunk → hallucinates confidently</li>
+          <li>Debugging is guesswork — no audit path</li>
+          <li>Re-indexing everything is the only fix</li>
+        </ul>
+      </div>
+      <div class="compare-card good">
+        <h4>✓ With PrismRAG Patch</h4>
+        <ul>
+          <li>"bank" is in your finance cluster because your rule says so</li>
+          <li>Your domain expertise defines which chunks are related</li>
+          <li>Agent gets verified chunks → grounded answers</li>
+          <li>Every retrieval traces back to a rule you wrote</li>
+          <li>Wrong result? Update one rule. Re-run. Done.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ADAPTERS ─────────────────────────────────────────────────────────────── -->
+<section class="section" id="adapters">
+  <div class="container">
+    <div class="section-label">Supported databases</div>
+    <h2 class="section-h2">Works with the database you already have.</h2>
+    <p class="section-sub">All four adapters ship in the same pip package. Mix and match as your stack evolves.</p>
+    <div class="adapters">
+      <div class="adapter-card">
+        <h3>pgvector (PostgreSQL)</h3>
+        <p>Wraps psycopg2 / psycopg3. Intercepts INSERT and SELECT ... ORDER BY embedding <=> queries. No schema changes required.</p>
+        <code style="display:block;margin:12px 0;font-size:.75rem">pip install prismrag-patch[pgvector]</code>
+        <span class="adapter-badge badge-green">Production ready</span>
+      </div>
+      <div class="adapter-card">
+        <h3>ChromaDB</h3>
+        <p>Wraps any chromadb Collection. Remaps embeddings on add() / upsert() and query(). Compatible with Chroma v0.4+.</p>
+        <code style="display:block;margin:12px 0;font-size:.75rem">pip install prismrag-patch[chroma]</code>
+        <span class="adapter-badge badge-green">Production ready</span>
+      </div>
+      <div class="adapter-card">
+        <h3>Pinecone</h3>
+        <p>Wraps a Pinecone Index. Intercepts upsert() and query(). Compatible with pinecone-client v3+.</p>
+        <code style="display:block;margin:12px 0;font-size:.75rem">pip install prismrag-patch[pinecone]</code>
+        <span class="adapter-badge badge-yellow">Available · GA Q3 2026</span>
+      </div>
+      <div class="adapter-card">
+        <h3>Weaviate</h3>
+        <p>Wraps the Weaviate Python client. Intercepts data_object.create() and nearVector queries.</p>
+        <code style="display:block;margin:12px 0;font-size:.75rem">pip install prismrag-patch[weaviate]</code>
+        <span class="adapter-badge badge-yellow">Available · GA Q3 2026</span>
+      </div>
+      <div class="adapter-card" style="border-style:dashed;opacity:.65;">
+        <h3>Coming soon</h3>
+        <p>Oracle AI Vector Search, Qdrant, Milvus, Azure AI Search, OpenSearch. Vote for your database at the link below.</p>
+        <span class="adapter-badge" style="background:rgba(136,146,164,.1);color:var(--muted);border:1px solid var(--border);">Roadmap</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INSTALL & QUICKSTART ─────────────────────────────────────────────────── -->
+<section class="section dark" id="quickstart">
+  <div class="container">
+    <div class="section-label">Quickstart</div>
+    <h2 class="section-h2">From zero to grounded retrieval in 5 minutes.</h2>
+
+    <div class="code-hero" style="max-width:100%;">
+      <div class="code-hero-header">
+        <div class="dot" style="background:#fc8181"></div>
+        <div class="dot" style="background:#ecc94b"></div>
+        <div class="dot" style="background:#48bb78"></div>
+        <span style="margin-left:8px;">quickstart_pgvector.py</span>
+      </div>
+      <pre><span class="c-comment"># 1. Install</span>
+<span class="c-comment">#    pip install prismrag-patch[pgvector]</span>
+
+<span class="c-kw">from</span> prismrag_patch <span class="c-kw">import</span> PrismRAGPatch
+<span class="c-kw">from</span> prismrag_patch.adapters.pgvector <span class="c-kw">import</span> PgvectorAdapter
+
+<span class="c-comment"># 2. Define your knowledge mapping</span>
+patch = PrismRAGPatch(
+    license_key=<span class="c-str">"prlib_your_key_here"</span>,   <span class="c-comment"># get at prismrag.insightits.com/lib</span>
+    mapping={
+        <span class="c-str">"categories"</span>: [
+            {<span class="c-str">"slug"</span>: <span class="c-str">"symptoms"</span>,  <span class="c-str">"label"</span>: <span class="c-str">"Symptoms &amp; Signs"</span>},
+            {<span class="c-str">"slug"</span>: <span class="c-str">"treatment"</span>, <span class="c-str">"label"</span>: <span class="c-str">"Treatment &amp; Therapy"</span>},
+            {<span class="c-str">"slug"</span>: <span class="c-str">"diagnosis"</span>, <span class="c-str">"label"</span>: <span class="c-str">"Diagnosis"</span>},
+        ],
+        <span class="c-str">"rules"</span>: [
+            {<span class="c-str">"word"</span>: <span class="c-str">"fever"</span>,        <span class="c-str">"category_slug"</span>: <span class="c-str">"symptoms"</span>},
+            {<span class="c-str">"word"</span>: <span class="c-str">"headache"</span>,     <span class="c-str">"category_slug"</span>: <span class="c-str">"symptoms"</span>},
+            {<span class="c-str">"word"</span>: <span class="c-str">"antibiotics"</span>,  <span class="c-str">"category_slug"</span>: <span class="c-str">"treatment"</span>},
+            {<span class="c-str">"word"</span>: <span class="c-str">"hypertension"</span>, <span class="c-str">"category_slug"</span>: <span class="c-str">"diagnosis"</span>},
+        ],
+    },
+)
+
+<span class="c-comment"># 3. Wrap your existing connection — no schema changes</span>
+adapter = PgvectorAdapter(patch, dsn=<span class="c-str">"postgresql://user:pass@localhost/mydb"</span>)
+
+<span class="c-comment"># 4. Insert with automatic re-mapping</span>
+my_vector = embed(<span class="c-str">"Patient presents with fever and headache"</span>)   <span class="c-comment"># your embedding fn</span>
+adapter.insert(text=<span class="c-str">"Patient presents with fever and headache"</span>, vector=my_vector)
+
+<span class="c-comment"># 5. Search — query is re-mapped identically, so similarity is preserved</span>
+results = adapter.search(<span class="c-str">"fever treatment"</span>, query_vector=q_vec, top_k=<span class="c-num">5</span>)
+<span class="c-comment"># → returns verified 'symptoms' and 'treatment' chunks — not river-bank noise</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ──────────────────────────────────────────────────────────────── -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-h2">One license per company. Unlimited developers.</h2>
+    <p class="section-sub">All plans include all four adapters, updates for the duration of the license, and email support. Cancel any time — no long-term commitment required.</p>
+
+    <div class="pricing-grid">
+
+      <div class="plan">
+        <div class="plan-name">Monthly</div>
+        <div class="plan-price">$199<sub>/mo</sub></div>
+        <div class="plan-period">Billed monthly · Cancel any time</div>
+        <ul class="plan-features">
+          <li>1 company license (unlimited devs)</li>
+          <li>pgvector + ChromaDB adapters</li>
+          <li>Pinecone + Weaviate adapters</li>
+          <li>License validation API (500k calls/day)</li>
+          <li>Updates while subscribed</li>
+          <li>Email support (48h response)</li>
+        </ul>
+        <a href="mailto:sales@prismrag.insightits.com?subject=PrismRAG+Patch+Monthly+License&body=Company%20name%3A%0AContact%20name%3A%0AVector%20DB%3A%20(pgvector%20%2F%20Chroma%20%2F%20Pinecone%20%2F%20Weaviate)" class="plan-btn ghost">Get started →</a>
+      </div>
+
+      <div class="plan popular">
+        <div class="popular-badge">Best value · Save $388/year</div>
+        <div class="plan-name">Annual</div>
+        <div class="plan-price">$2,000<sub>/yr</sub></div>
+        <div class="plan-period">$167/month · Billed once per year</div>
+        <ul class="plan-features">
+          <li>1 company license (unlimited devs)</li>
+          <li>All 4 adapters included</li>
+          <li>License validation API (500k calls/day)</li>
+          <li>12 months of updates</li>
+          <li>Priority email support (24h response)</li>
+          <li>Invoice &amp; PO available</li>
+        </ul>
+        <a href="mailto:sales@prismrag.insightits.com?subject=PrismRAG+Patch+Annual+License&body=Company%20name%3A%0AContact%20name%3A%0AVector%20DB%3A%20(pgvector%20%2F%20Chroma%20%2F%20Pinecone%20%2F%20Weaviate)" class="plan-btn primary">Buy annual license →</a>
+      </div>
+
+      <div class="plan">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price" style="font-size:1.5rem;padding-top:8px;">Custom</div>
+        <div class="plan-period">Multi-site · Source code license · SLA</div>
+        <ul class="plan-features">
+          <li>Unlimited company sites / subsidiaries</li>
+          <li>Source code license available</li>
+          <li>Custom adapter development</li>
+          <li>Oracle AI Vector Search adapter</li>
+          <li>Dedicated Slack channel</li>
+          <li>4h SLA response</li>
+        </ul>
+        <a href="mailto:sales@prismrag.insightits.com?subject=PrismRAG+Patch+Enterprise" class="plan-btn ghost">Contact sales →</a>
+      </div>
+
+    </div>
+
+    <div style="margin-top:32px;padding:20px 28px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:.875rem;color:var(--muted);">
+      🔒 <strong style="color:var(--text);">How licensing works:</strong>
+      You receive a <code>prlib_</code> key. On startup the library validates it against our server (result cached 23 hours — no latency on queries). After your subscription ends you have a 7-day grace period. Keys are company-scoped — share freely within your team.
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ──────────────────────────────────────────────────────────────────── -->
+<section class="section dark" id="faq">
+  <div class="container">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-h2">Common questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q">Does my data ever leave my environment?</div>
+        <div class="faq-a">No. All re-mapping is computed locally using your mapping rules. Only the license key is validated against our server — no embeddings, no queries, no documents are ever sent to us.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What happens if the license server is unreachable?</div>
+        <div class="faq-a">The library caches the validation result locally for 23 hours. If the cache is valid, your application continues working offline. If both the server and cache are unavailable on startup, an error is raised with a clear message.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Do I need to change my database schema?</div>
+        <div class="faq-a">No. The adapter wraps your existing connection. Vectors are remapped in memory before the INSERT/upsert call — your schema, indexes, and existing data are untouched. The only change is the float values in your embedding column.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What about existing embeddings already in my database?</div>
+        <div class="faq-a">Existing embeddings were stored without re-mapping. You can backfill by fetching them, applying <code>patch.remap(text, vector)</code>, and updating. We provide a backfill utility script with every license.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I use my own embedding model?</div>
+        <div class="faq-a">Yes — PrismRAG Patch is embedding-model agnostic. It works with any vector, regardless of dimension or model (OpenAI, Cohere, Gemini, local models, etc.). You embed, we remap.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How many developers can use one license?</div>
+        <div class="faq-a">Unlimited. One license covers your entire company — all developers, all services, all environments (dev, staging, prod). The <code>500k calls/day</code> limit is on license validation calls (cached 23h), not on your actual query volume.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ───────────────────────────────────────────────────────────────────── -->
+<section class="cta">
+  <div class="container">
+    <h2>Ready to ground your AI agents?</h2>
+    <p>Email us your company name and vector database. We'll send a trial key within one business day.</p>
+    <div class="hero-actions" style="justify-content:center;">
+      <a href="mailto:sales@prismrag.insightits.com?subject=PrismRAG+Patch+Annual+License&body=Company%20name%3A%0AContact%20name%3A%0AVector%20DB%3A%20(pgvector%20%2F%20Chroma%20%2F%20Pinecone%20%2F%20Weaviate)%0A%0AMessage%3A" class="btn-primary">Buy annual — $2,000/year</a>
+      <a href="mailto:sales@prismrag.insightits.com?subject=PrismRAG+Patch+Trial" class="btn-ghost">Request a free trial key</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 Insight IT Solutions · <a href="/">PrismRAG</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a> · <a href="mailto:sales@prismrag.insightits.com">sales@prismrag.insightits.com</a></p>
+</footer>
+
+</body>
+</html>

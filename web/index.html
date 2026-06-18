@@ -1015,6 +1015,56 @@
   </div>
 </section>
 
+<!-- ── PRISMRAG PATCH LIBRARY ─────────────────────────────────────────── -->
+<section style="padding:96px 24px;background:#07070f;border-top:1px solid #1a1d2e;" id="prismrag-patch">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;">
+      <div>
+        <div style="display:inline-block;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:#2dd4bf;border-radius:100px;padding:4px 16px;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:20px;">Python Library · pip install</div>
+        <h2 style="font-size:clamp(1.6rem,3vw,2.25rem);font-weight:800;line-height:1.2;margin-bottom:16px;">
+          Use PrismRAG's technique<br/>in <em style="color:#7c6af7;font-style:normal;">your own</em> vector database.
+        </h2>
+        <p style="color:#8892a4;font-size:.9375rem;line-height:1.7;margin-bottom:24px;">
+          <strong style="color:#e2e8f0;">PrismRAG Patch</strong> is a drop-in Python library that wraps pgvector, ChromaDB, Pinecone, or Weaviate
+          with our hallucination-resistant re-mapping technique. No data leaves your environment. 5 lines of code.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px;">
+          <span style="background:rgba(72,187,120,.08);border:1px solid rgba(72,187,120,.2);color:#48bb78;border-radius:6px;padding:4px 12px;font-size:.75rem;font-weight:600;">pgvector</span>
+          <span style="background:rgba(72,187,120,.08);border:1px solid rgba(72,187,120,.2);color:#48bb78;border-radius:6px;padding:4px 12px;font-size:.75rem;font-weight:600;">ChromaDB</span>
+          <span style="background:rgba(236,201,75,.08);border:1px solid rgba(236,201,75,.2);color:#ecc94b;border-radius:6px;padding:4px 12px;font-size:.75rem;font-weight:600;">Pinecone</span>
+          <span style="background:rgba(236,201,75,.08);border:1px solid rgba(236,201,75,.2);color:#ecc94b;border-radius:6px;padding:4px 12px;font-size:.75rem;font-weight:600;">Weaviate</span>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+          <a href="/prismrag-lib.html" style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;background:#7c6af7;color:#fff;border-radius:10px;font-weight:700;font-size:.9rem;text-decoration:none;">
+            See pricing &amp; docs →
+          </a>
+          <span style="color:#8892a4;font-size:.875rem;">From <strong style="color:#e2e8f0;">$167/month</strong> · Annual $2,000/yr</span>
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #252840;border-radius:14px;overflow:hidden;">
+        <div style="padding:12px 20px;border-bottom:1px solid #252840;display:flex;align-items:center;gap:8px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#fc8181;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#ecc94b;"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#48bb78;"></div>
+          <span style="font-size:.7rem;color:#8892a4;font-family:'JetBrains Mono',monospace;margin-left:8px;">your_rag.py</span>
+        </div>
+        <pre style="padding:24px;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.75;color:#c9d1d9;overflow-x:auto;margin:0;"><span style="color:#6a7384;"># 5 lines to ground your RAG</span>
+<span style="color:#7c6af7;font-weight:600;">from</span> prismrag_patch <span style="color:#7c6af7;font-weight:600;">import</span> PrismRAGPatch
+<span style="color:#7c6af7;font-weight:600;">from</span> prismrag_patch.adapters.pgvector <span style="color:#7c6af7;font-weight:600;">import</span> PgvectorAdapter
+
+patch   = PrismRAGPatch(license_key=<span style="color:#2dd4bf;">"prlib_…"</span>, mapping=your_map)
+adapter = PgvectorAdapter(patch, connection=your_conn)
+
+<span style="color:#6a7384;"># insert → re-mapped before storage</span>
+adapter.insert(text=doc, vector=embed(doc))
+
+<span style="color:#6a7384;"># search → query re-mapped identically</span>
+results = adapter.search(<span style="color:#2dd4bf;">"fever treatment"</span>, query_vector=q)</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── FOOTER ────────────────────────────────────────────────────────────── -->
 <footer class="footer">
   <div class="container">

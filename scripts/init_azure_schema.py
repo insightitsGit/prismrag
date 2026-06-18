@@ -32,6 +32,8 @@ SCHEMA_FILES = (
     REPO / "prismrag" / "deliberation_schema.sql",
     REPO / "prismrag" / "quality" / "schema.sql",
     REPO / "prismrag" / "migrations" / "001_add_user_role.sql",
+    REPO / "prismrag" / "migrations" / "add_ip_allowlist.sql",
+    REPO / "prismrag" / "migrations" / "add_lib_licenses.sql",
 )
 
 
