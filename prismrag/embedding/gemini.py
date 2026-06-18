@@ -20,7 +20,7 @@ _EMBED_URL = (
 
 def _call_gemini_batch(texts: list[str]) -> list[list[float] | None]:
     """Call Gemini batchEmbedContents. Returns one vector per text (or None on error)."""
-    api_key = GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or ""
+    api_key = (GEMINI_API_KEY or os.getenv("GEMINI_API_KEY") or "").strip().lstrip("\ufeff")
     if not api_key:
         logger.warning("GEMINI_API_KEY not set — returning zero vectors")
         return [None] * len(texts)
