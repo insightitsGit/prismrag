@@ -117,11 +117,16 @@ def _persist_mapping(tenant_id: str, mapping_config: MappingConfigIn, strategy: 
         )
         import json
         cur.execute(
+            "SELECT COALESCE(MAX(version), 0) + 1 FROM prismrag.mapping_version WHERE tenant_id = %s",
+            (tenant_id,),
+        )
+        next_version = cur.fetchone()[0]
+        cur.execute(
             """
-            INSERT INTO prismrag.mapping_version (id, tenant_id, strategy, status, config_json)
-            VALUES (%s, %s, %s, 'active', %s::jsonb)
+            INSERT INTO prismrag.mapping_version (id, tenant_id, version, strategy, status, config_json)
+            VALUES (%s, %s, %s, %s, 'active', %s::jsonb)
             """,
-            (mapping_id, tenant_id, strategy, json.dumps({})),
+            (mapping_id, tenant_id, next_version, strategy, json.dumps({})),
         )
         for cat in mapping_config.categories:
             cur.execute(
