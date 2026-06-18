@@ -526,16 +526,40 @@ async function checkout(plan) {
   }
 }
 
-document.getElementById('manage-billing-btn').addEventListener('click', async () => {
+function initManageBillingBtn() {
+  const user = getUser();
   const btn = document.getElementById('manage-billing-btn');
-  btn.textContent = 'Loading…'; btn.disabled = true;
-  const res = await apiFetch('/api/billing/portal', { method: 'POST', body: JSON.stringify({}) });
-  btn.textContent = 'Manage billing'; btn.disabled = false;
-  if (res && res.ok) {
-    const d = await res.json();
-    if (d.redirect) window.location.href = d.redirect;
+  if (!btn) return;
+
+  // If user has no Stripe customer yet, show tooltip instead of silently failing
+  if (!user?.stripeCustomerId) {
+    btn.disabled = true;
+    btn.title = 'Subscribe to a paid plan to access the billing portal';
+    btn.style.opacity = '0.45';
+    btn.style.cursor = 'not-allowed';
+    return;
   }
-});
+
+  btn.addEventListener('click', async () => {
+    btn.textContent = 'Loading…'; btn.disabled = true;
+    const res = await apiFetch('/api/billing/portal', { method: 'POST', body: JSON.stringify({}) });
+    btn.textContent = 'Manage billing'; btn.disabled = false;
+    if (res && res.ok) {
+      const d = await res.json();
+      if (d.redirect) window.location.href = d.redirect;
+    } else {
+      let msg = 'Could not open billing portal.';
+      try { const err = await res.json(); msg = err.detail || msg; } catch (_) {}
+      const card = document.getElementById('current-plan-card');
+      const errDiv = document.createElement('p');
+      errDiv.style.cssText = 'color:#fc8181;font-size:.825rem;margin-top:10px;';
+      errDiv.textContent = msg + ' Email sales@prismrag.insightits.com for help.';
+      card.appendChild(errDiv);
+      setTimeout(() => errDiv.remove(), 7000);
+    }
+  });
+}
+initManageBillingBtn();
 
 /* ── Security / MFA ───────────────────────────────────────────────────────── */
 let mfaEnrollSecret = null;
