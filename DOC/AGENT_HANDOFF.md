@@ -11,20 +11,47 @@
 
 | Component | Status | Detail |
 |---|---|---|
-| Azure resource group | ✅ Created | `prismrag-rg` in `eastus2` |
-| Azure Container Registry | ✅ Created | `prismragacr.azurecr.io` |
-| Service principal | ✅ Created | `prismrag-deploy` (Contributor on RG) |
-| GitHub Actions pipeline | ✅ Written | `.github/workflows/deploy.yml` |
-| GitHub secrets | ✅ Partial (5/10 set) | See table below |
-| Code committed to GitHub | ⏳ Pending user approval | `git commit` requires explicit "yes commit" from user |
-| Docker images in ACR | ❌ Not yet | Blocked on commit + pipeline run |
-| Container Apps deployed | ❌ Not yet | Blocked on images |
-| Live API URL | ❌ Not yet | Will appear after first successful pipeline run |
+| Azure resource group | ✅ Live | `prismrag-rg` in `eastus2` |
+| Azure Container Registry | ✅ Live | `prismragacr.azurecr.io` |
+| Container Apps environment | ✅ Live | `prismrag-env` (Succeeded) |
+| Docker images in ACR | ✅ Live | `prismrag-api:latest`, `prismrag-worker:latest` |
+| Container Apps | ✅ Deployed | Both apps running via managed identity image pull |
+| Service principal | ✅ Created | `prismrag-deploy` (Contributor on RG + User Access Admin on ACR) |
+| Managed identity | ✅ Created | `prismrag-pull-id` with AcrPull on ACR |
+| GitHub Actions pipeline | ✅ Working | `.github/workflows/deploy.yml` — `[publish]` gate |
+| GitHub secrets | ✅ All set | All 13 secrets configured |
+| Live API URL | ⚠️ Partial | App is running but DB not wired yet — health check fails |
+| DB secrets wired to running apps | ❌ Needs fix | See "Pending Actions" |
 
-**The live URL will be:** `https://prismrag-api.<hash>.eastus2.azurecontainerapps.io`  
-After deployment, run: `az containerapp show --name prismrag-api --resource-group prismrag-rg --query properties.configuration.ingress.fqdn -o tsv`
+**Live URL:** `https://prismrag-api.delightfuldesert-fc8896c5.eastus2.azurecontainerapps.io`  
+**Docs:** `https://prismrag-api.delightfuldesert-fc8896c5.eastus2.azurecontainerapps.io/docs`
 
-The user will also set up a custom subdomain: `api.prismrag.insightits.com` → DNS CNAME to the above URL, after QA passes.
+The user will CNAME `api.prismrag.insightits.com` → the above FQDN after QA passes.
+
+### What the other agent needs to fix
+
+The container apps were created with minimal env vars for the initial image-pull test. The full secret set needs to be applied:
+
+```bash
+# Get identity ID
+IDENTITY_ID=$(az identity show --name prismrag-pull-id --resource-group prismrag-rg --query id -o tsv)
+DB_DSN="<Neon DSN from DB_CONNECTION_STRING secret>"
+JWT="<from JWT_SECRET>"
+GEMINI="<from GEMINI_API_KEY>"
+# ... other secrets
+
+az containerapp update \
+  --name prismrag-api \
+  --resource-group prismrag-rg \
+  --image prismragacr.azurecr.io/prismrag-api:latest \
+  --registry-server prismragacr.azurecr.io \
+  --registry-identity $IDENTITY_ID \
+  --user-assigned $IDENTITY_ID \
+  --secrets "db-dsn=${DB_DSN} jwt-secret=${JWT} gemini-key=${GEMINI} ..." \
+  --env-vars "PRISMRAG_DB_DSN=secretref:db-dsn ..."
+```
+
+OR trigger a `[publish]` pipeline run which will do this automatically once the workflow is confirmed correct.
 
 ---
 
