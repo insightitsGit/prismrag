@@ -105,17 +105,19 @@ def get_job(job_id: str) -> dict | None:
 
 def _persist_mapping(tenant_id: str, mapping_config: MappingConfigIn, strategy: str) -> str:
     """Insert mapping_version + categories + rules. Returns mapping_id."""
+    import json
     mapping_id = str(uuid.uuid4())
     conn = get_conn()
     try:
         cur = conn.cursor()
+        # Lock the tenant row to serialize concurrent mapping creation for the same tenant
+        cur.execute("SELECT id FROM prismrag.tenant WHERE id = %s FOR UPDATE", (tenant_id,))
         # Deactivate previous active mapping for this tenant
         cur.execute(
             "UPDATE prismrag.mapping_version SET status='archived' "
             "WHERE tenant_id = %s AND status = 'active'",
             (tenant_id,),
         )
-        import json
         cur.execute(
             "SELECT COALESCE(MAX(version), 0) + 1 FROM prismrag.mapping_version WHERE tenant_id = %s",
             (tenant_id,),
@@ -125,9 +127,15 @@ def _persist_mapping(tenant_id: str, mapping_config: MappingConfigIn, strategy: 
             """
             INSERT INTO prismrag.mapping_version (id, tenant_id, version, strategy, status, config_json)
             VALUES (%s, %s, %s, %s, 'active', %s::jsonb)
+            ON CONFLICT (tenant_id, version) DO UPDATE
+                SET id = EXCLUDED.id, status = 'active', strategy = EXCLUDED.strategy
+            RETURNING id
             """,
             (mapping_id, tenant_id, next_version, strategy, json.dumps({})),
         )
+        row = cur.fetchone()
+        if row:
+            mapping_id = str(row[0])
         for cat in mapping_config.categories:
             cur.execute(
                 "INSERT INTO prismrag.mapping_category (mapping_id, category_slug, category_label, sort_order) "
