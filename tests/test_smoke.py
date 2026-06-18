@@ -30,12 +30,12 @@ def auth_token(client):
         # Account already exists from a previous smoke run — just log in
         login = client.post("/api/v1/auth/login", json={"email": SMOKE_EMAIL, "password": SMOKE_PASS})
         assert login.status_code == 200, f"Login failed: {login.text}"
-        return login.json()["access_token"]
+        return login.json()["token"]
 
     assert reg.status_code in (200, 201), f"Register failed ({reg.status_code}): {reg.text}"
     login = client.post("/api/v1/auth/login", json={"email": SMOKE_EMAIL, "password": SMOKE_PASS})
     assert login.status_code == 200, f"Login after register failed: {login.text}"
-    return login.json()["access_token"]
+    return login.json()["token"]
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -84,8 +84,17 @@ def test_unauthorized_returns_401(client):
 
 @pytest.fixture(scope="module")
 def smoke_tenant(client, auth_token):
-    """Create a smoke-test tenant and return its ID."""
+    """Return an existing tenant or create one.  Free-plan accounts get 1 workspace max."""
     headers = {"Authorization": f"Bearer {auth_token}"}
+    # Try to use existing tenant first (avoids free-plan quota errors on repeat runs)
+    list_r = client.get("/api/v1/prismrag/tenants", headers=headers)
+    if list_r.status_code == 200:
+        tenants = list_r.json()
+        if tenants:
+            tenant_id = tenants[0].get("tenant_id") or tenants[0].get("id")
+            if tenant_id:
+                return tenant_id
+    # No existing tenant — create one
     r = client.post("/api/v1/prismrag/tenants", json={"name": "smoke-tenant"}, headers=headers)
     assert r.status_code in (200, 201), f"Tenant create failed: {r.text}"
     tenant_id = r.json().get("tenant_id") or r.json().get("id")

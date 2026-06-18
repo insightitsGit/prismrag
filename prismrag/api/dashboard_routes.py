@@ -37,15 +37,17 @@ def tenant_usage(user: dict = Depends(get_current_user)):
 
         # Current period events
         cur.execute("""
-            SELECT event_type, SUM(quantity)
+            SELECT event_type, SUM(units)
             FROM prismrag.usage_event
             WHERE tenant_id = %s AND created_at BETWEEN %s AND %s
             GROUP BY event_type
         """, (tenant_id, period_start, period_end))
-        usage = {r[0]: int(r[1]) for r in cur.fetchall()}
+        usage = {r[0]: int(r[1] or 0) for r in cur.fetchall()}
 
         # Tenant plan
-        cur.execute("SELECT tier FROM prismrag.tenant WHERE id = %s", (tenant_id,))
+        # Map tenant tier column → billing plan names
+        # prismrag.tenant.tier = 'tier1'|'tier2', but billing plan = user plan
+        cur.execute("SELECT plan FROM prismrag.user_account WHERE id = (SELECT user_id FROM prismrag.tenant_member WHERE tenant_id = %s LIMIT 1)", (tenant_id,))
         row = cur.fetchone()
         tier = (row[0] if row else "starter") or "starter"
         limits = PLAN_LIMITS.get(tier, PLAN_LIMITS["starter"])
@@ -58,7 +60,7 @@ def tenant_usage(user: dict = Depends(get_current_user)):
             SELECT
                 DATE_TRUNC('day', created_at) AS day,
                 event_type,
-                SUM(quantity) AS qty
+                SUM(units) AS qty
             FROM prismrag.usage_event
             WHERE tenant_id = %s AND created_at >= NOW() - INTERVAL '30 days'
             GROUP BY day, event_type

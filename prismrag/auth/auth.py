@@ -176,9 +176,15 @@ def _load_user(user_id: str, conn=None) -> dict:
         cur = _conn.cursor()
         cur.execute(
             """
-            SELECT id, email, full_name, company, plan,
-                   subscription_status, is_active, stripe_customer_id
-            FROM prismrag.user_account WHERE id = %s
+            SELECT ua.id, ua.email, ua.full_name, ua.company, ua.plan,
+                   ua.subscription_status, ua.is_active, ua.stripe_customer_id,
+                   ua.role,
+                   t.id AS tenant_id
+            FROM prismrag.user_account ua
+            LEFT JOIN prismrag.tenant t ON lower(t.owner_email) = lower(ua.email)
+            WHERE ua.id = %s
+            ORDER BY t.created_at
+            LIMIT 1
             """,
             (user_id,),
         )
@@ -193,6 +199,8 @@ def _load_user(user_id: str, conn=None) -> dict:
             "plan":                row[4],
             "subscriptionStatus":  row[5],
             "stripeCustomerId":    row[7],
+            "role":                row[8] or "user",
+            "tenant_id":           str(row[9]) if row[9] else None,
         }
     finally:
         if owned:

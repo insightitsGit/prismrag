@@ -58,12 +58,39 @@ def vector_to_pg(vec) -> str:
 _SCHEMA_FILES = (
     "schema.sql",
     "auth_schema.sql",
+    "audit_schema.sql",
     "enterprise_schema.sql",
     "enterprise_features_schema.sql",
-    "audit_schema.sql",
     "deliberation_schema.sql",
     "quality/schema.sql",
+    "migrations/001_add_user_role.sql",
 )
+
+
+def _azure_adapt_sql(sql: str) -> str:
+    """Azure Flexible Server allowlists vector only; use built-in gen_random_uuid()."""
+    lines = []
+    for line in sql.splitlines():
+        if 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"' in line:
+            continue
+        lines.append(line.replace("uuid_generate_v4()", "gen_random_uuid()"))
+    return "\n".join(lines)
+
+
+def _load_schema_sql(name: str) -> str:
+    base = os.path.dirname(__file__)
+    path = os.path.join(base, name)
+    with open(path, encoding="utf-8") as f:
+        sql = f.read()
+    dsn = (
+        os.getenv("PRISMRAG_DB_DSN")
+        or os.getenv("DATABASE_URL")
+        or os.getenv("PRISMRAG_DATABASE_URL")
+        or ""
+    )
+    if "postgres.database.azure.com" in dsn:
+        sql = _azure_adapt_sql(sql)
+    return sql
 
 
 def _execute_sql_script(cur, sql: str) -> None:
@@ -95,14 +122,11 @@ def init_schema(force: bool = False) -> None:
     with _schema_lock:
         if _schema_ready and not force:
             return
-        base = os.path.dirname(__file__)
         conn = get_conn()
         try:
             cur = conn.cursor()
             for name in _SCHEMA_FILES:
-                path = os.path.join(base, name)
-                with open(path, encoding="utf-8") as f:
-                    _execute_sql_script(cur, f.read())
+                _execute_sql_script(cur, _load_schema_sql(name))
             conn.commit()
             _schema_ready = True
             print("[PrismRAG] Schema ready")

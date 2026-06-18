@@ -14,7 +14,8 @@ router = APIRouter(prefix="/api/v1/admin", tags=["Admin"])
 
 
 def _require_superadmin(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("role") != "superadmin":
+    # role field comes from _load_user which reads user_account.role
+    if user.get("role") not in ("superadmin",):
         raise HTTPException(status_code=403, detail="Superadmin access required")
     return user
 
@@ -39,10 +40,10 @@ def list_tenants(
                 t.id, t.name, t.owner_email, t.tier,
                 t.data_region, t.created_at,
                 COUNT(DISTINCT u.id)  AS user_count,
-                COALESCE(SUM(ue.quantity), 0) AS total_events
+                COALESCE(SUM(ue.units), 0) AS total_events
             FROM prismrag.tenant t
             LEFT JOIN prismrag.tenant_member tm ON tm.tenant_id = t.id
-            LEFT JOIN prismrag.user u ON u.id = tm.user_id
+            LEFT JOIN prismrag.user_account u ON u.id = tm.user_id
             LEFT JOIN prismrag.usage_event ue ON ue.tenant_id = t.id
             {where}
             GROUP BY t.id, t.name, t.owner_email, t.tier, t.data_region, t.created_at
@@ -82,7 +83,7 @@ def get_tenant(tenant_id: str, _: dict = Depends(_require_superadmin)):
             raise HTTPException(status_code=404, detail="Tenant not found")
 
         cur.execute("""
-            SELECT event_type, SUM(quantity)
+            SELECT event_type, SUM(units)
             FROM prismrag.usage_event
             WHERE tenant_id = %s AND created_at >= NOW() - INTERVAL '30 days'
             GROUP BY event_type
@@ -92,7 +93,7 @@ def get_tenant(tenant_id: str, _: dict = Depends(_require_superadmin)):
         cur.execute("""
             SELECT u.id, u.email, tm.role, u.created_at
             FROM prismrag.tenant_member tm
-            JOIN prismrag.user u ON u.id = tm.user_id
+            JOIN prismrag.user_account u ON u.id = tm.user_id
             WHERE tm.tenant_id = %s
             ORDER BY u.created_at
         """, (tenant_id,))
@@ -148,11 +149,11 @@ def list_users(
         params = [f"%{search}%"] if search else []
         cur.execute(f"""
             SELECT id, email, role, plan, created_at, last_login_at
-            FROM prismrag.user {where}
+            FROM prismrag.user_account {where}
             ORDER BY created_at DESC LIMIT %s OFFSET %s
         """, params + [limit, offset])
         rows = cur.fetchall()
-        cur.execute(f"SELECT COUNT(*) FROM prismrag.user {where}", params)
+        cur.execute(f"SELECT COUNT(*) FROM prismrag.user_account {where}", params)
         total = cur.fetchone()[0]
         return {
             "total": total,
@@ -183,7 +184,7 @@ def update_user_role(
     conn = get_conn()
     try:
         cur = conn.cursor()
-        cur.execute("UPDATE prismrag.user SET role = %s WHERE id = %s RETURNING id", (role, user_id))
+        cur.execute("UPDATE prismrag.user_account SET role = %s WHERE id = %s RETURNING id", (role, user_id))
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="User not found")
         conn.commit()
@@ -209,14 +210,14 @@ def platform_metrics(
         cur.execute("SELECT COUNT(*) FROM prismrag.tenant")
         tenants_total = cur.fetchone()[0]
 
-        cur.execute("SELECT COUNT(*) FROM prismrag.user")
+        cur.execute("SELECT COUNT(*) FROM prismrag.user_account")
         users_total = cur.fetchone()[0]
 
-        cur.execute("SELECT COUNT(*) FROM prismrag.user WHERE created_at >= %s", (since,))
+        cur.execute("SELECT COUNT(*) FROM prismrag.user_account WHERE created_at >= %s", (since,))
         new_users = cur.fetchone()[0]
 
         cur.execute("""
-            SELECT event_type, SUM(quantity)
+            SELECT event_type, SUM(units)
             FROM prismrag.usage_event
             WHERE created_at >= %s
             GROUP BY event_type
