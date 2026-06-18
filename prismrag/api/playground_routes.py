@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from prismrag.auth.auth import get_current_user
+from prismrag.config import GEMINI_LLM_MODEL
 
 log = logging.getLogger(__name__)
 
