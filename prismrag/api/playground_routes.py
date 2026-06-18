@@ -59,7 +59,8 @@ def _gemini_chat(query: str, context: str) -> str:
     try:
         import google.generativeai as genai  # type: ignore
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        from prismrag.config import GEMINI_LLM_MODEL
+        model = genai.GenerativeModel(GEMINI_LLM_MODEL)
 
         system = (
             "You are a helpful assistant that answers questions STRICTLY based on "
@@ -113,7 +114,7 @@ async def playground_chat(
 
     return ChatResponse(
         answer=answer,
-        model="gemini-2.0-flash-exp",
+        model=GEMINI_LLM_MODEL,
         grounded=grounded,
         chunk_count=chunk_count,
     )

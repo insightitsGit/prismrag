@@ -116,7 +116,8 @@ def synthesize(
         import os
         import google.generativeai as genai
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        from prismrag.config import GEMINI_LLM_MODEL
+        model = genai.GenerativeModel(GEMINI_LLM_MODEL)
         resp = model.generate_content(prompt)
         raw = (resp.text or "").strip()
 

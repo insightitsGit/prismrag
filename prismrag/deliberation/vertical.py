@@ -107,7 +107,8 @@ def query_domain(
         import os
         import google.generativeai as genai
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        from prismrag.config import GEMINI_LLM_MODEL
+        model = genai.GenerativeModel(GEMINI_LLM_MODEL)
         resp = model.generate_content(prompt)
         raw_text = resp.text or ""
         tokens = getattr(resp.usage_metadata, "total_token_count", 0) if hasattr(resp, "usage_metadata") else 0

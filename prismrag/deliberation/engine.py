@@ -354,7 +354,8 @@ def run_followup(
         import os
         import google.generativeai as genai
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        from prismrag.config import GEMINI_LLM_MODEL
+        model = genai.GenerativeModel(GEMINI_LLM_MODEL)
         resp = model.generate_content(prompt)
         answer = resp.text or ""
     except Exception as exc:

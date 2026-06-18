@@ -64,7 +64,8 @@ def discover_via_llm(question: str, n: int = 7) -> list[Domain]:
         import google.generativeai as genai
         import os
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        from prismrag.config import GEMINI_LLM_MODEL
+        model = genai.GenerativeModel(GEMINI_LLM_MODEL)
         prompt = _DISCOVER_PROMPT.format(question=question, n=n)
         resp = model.generate_content(prompt)
         raw = (resp.text or "").strip()
