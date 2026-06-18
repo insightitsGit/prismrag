@@ -438,14 +438,18 @@ async function revokeKey(keyId, btn) {
 }
 
 /* ── Billing ──────────────────────────────────────────────────────────────── */
+let _stripeConfigured = true; // assume yes until plans API tells us otherwise
+
 async function loadBillingPlans() {
   const container = document.getElementById('billing-plans');
   if (container.children.length > 0) return;  // already loaded
 
   const res = await apiFetch('/api/billing/plans');
   if (!res || !res.ok) return;
-  const { plans, publishable_key, stripePublishableKey } = await res.json();
+  const data = await res.json();
+  const { plans, publishable_key, stripePublishableKey, stripe_configured } = data;
   const pk = publishable_key || stripePublishableKey || '';
+  _stripeConfigured = stripe_configured !== false;
 
   const user = getUser();
   const currentPlan = user?.plan || 'free';
@@ -457,12 +461,20 @@ async function loadBillingPlans() {
     document.getElementById('billing-plan-desc').textContent = current.description;
   }
 
+  if (!_stripeConfigured) {
+    container.innerHTML = `<div style="grid-column:1/-1;padding:24px;background:rgba(236,201,75,.06);border:1px solid rgba(236,201,75,.2);border-radius:10px;color:#ecc94b;font-size:.875rem;">
+      <strong>Billing is being set up.</strong> Online checkout will be available shortly. To upgrade now, email
+      <a href="mailto:sales@prismrag.insightits.com" style="color:#ecc94b;">sales@prismrag.insightits.com</a>.
+    </div>`;
+    return;
+  }
+
   container.innerHTML = plans.filter(p => p.id !== 'free').map(p => planCard(p, currentPlan, pk)).join('');
 }
 
 function planCard(p, currentPlan, pk) {
   const isCurrent = p.id === currentPlan;
-  const canCheckout = p.stripe_checkout !== false && p.id !== 'free';
+  const canCheckout = _stripeConfigured && p.stripe_checkout !== false && p.id !== 'free';
   const btnLabel  = isCurrent ? 'Current plan' : (p.cta || 'Upgrade');
   const btnClass  = isCurrent ? 'btn-sm-ghost' : 'btn-sm-primary';
   const onclick   = isCurrent || !canCheckout ? '' : `onclick="checkout('${p.id}')"`;
@@ -476,20 +488,41 @@ function planCard(p, currentPlan, pk) {
     </div>
     <p class="plan-desc">${escHtml(p.description)}</p>
     <ul class="plan-features">${(p.features || []).map(f => `<li>${escHtml(f)}</li>`).join('')}</ul>
-    <button class="${btnClass}" ${isCurrent ? 'disabled' : ''} ${onclick}>${btnLabel}</button>
+    <button class="${btnClass}" ${isCurrent || !canCheckout ? 'disabled' : ''} ${onclick}>${btnLabel}</button>
   </div>`;
 }
 
 async function checkout(plan) {
+  const btn = document.querySelector(`button[onclick="checkout('${plan}')"]`);
+  const origLabel = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+
   const res = await apiFetch('/api/billing/checkout', {
     method: 'POST',
     body: JSON.stringify({ plan }),
   });
+
+  if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+
   if (res && res.ok) {
     const d = await res.json();
     if (d.redirect) window.location.href = d.redirect;
   } else {
-    alert('Could not start checkout. Please try again.');
+    let msg = 'Could not start checkout.';
+    try {
+      const err = await res.json();
+      msg = err.detail || msg;
+    } catch (_) {}
+    // Show inline error instead of blocking alert
+    const container = document.getElementById('billing-plans');
+    const errDiv = document.createElement('div');
+    errDiv.style.cssText = 'grid-column:1/-1;padding:14px 18px;background:rgba(252,129,129,.06);border:1px solid rgba(252,129,129,.25);border-radius:8px;color:#fc8181;font-size:.875rem;margin-top:8px;';
+    errDiv.textContent = msg + ' Please email sales@prismrag.insightits.com if this persists.';
+    const existing = container.querySelector('.billing-err');
+    if (existing) existing.remove();
+    errDiv.className = 'billing-err';
+    container.appendChild(errDiv);
+    setTimeout(() => errDiv.remove(), 8000);
   }
 }
 
