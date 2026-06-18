@@ -124,6 +124,7 @@ if ($Target -eq "prod") {
     $pytestCmd = @(
         "-m", "pytest",
         "tests/test_production_api.py",
+        "tests/test_chunk_quality.py",
         "tests/test_smoke.py",
         "--base-url=$apiUrl",
         "-v",

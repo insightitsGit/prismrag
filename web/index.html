@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
   <!-- ── Primary SEO ─────────────────────────────────────────────────────── -->
-  <title>PrismRAG — Enterprise Knowledge Graph & AI Deliberation Platform</title>
-  <meta name="description" content="PrismRAG replaces Graph RAG with client-defined semantic mapping. Two products: PrismRAG (your knowledge graph, your rules) and Deliberation (multi-domain AI expert synthesis). Enterprise-grade, API-first, MCP-native."/>
-  <meta name="keywords" content="Graph RAG, enterprise RAG, semantic mapping, knowledge graph, AI deliberation, multi-domain AI, vector search, pgvector, MCP server, enterprise AI, knowledge base API, RAG alternative"/>
+  <title>PrismRAG — Stop AI Agent Hallucination | Enterprise Knowledge Graph & Deliberation</title>
+  <meta name="description" content="PrismRAG grounds AI agents in your verified knowledge — not statistical document co-occurrence. Auditable rules, deterministic retrieval, zero hallucination paths. Enterprise RAG, MCP-native."/>
+  <meta name="keywords" content="AI agent hallucination, RAG hallucination fix, grounded AI agents, Graph RAG, enterprise RAG, semantic mapping, knowledge graph, AI deliberation, multi-domain AI, vector search, pgvector, MCP server, enterprise AI, knowledge base API, RAG alternative, agent grounding"/>
   <link rel="canonical" href="https://prismrag.io/"/>
 
   <!-- ── Open Graph (social + AI crawlers) ────────────────────────────────── -->
@@ -153,6 +153,14 @@
           "@type": "Answer",
           "text": "PrismRAG (knowledge graph): Free $0/mo (5,000 chunks), Starter $49/mo (50,000 chunks), Professional $199/mo (500,000 chunks + MLP + bridge vectors), Enterprise $499/mo (unlimited). Deliberation is included: 5 / 50 / 500 / unlimited sessions per month by tier. Overage: $0.25 per deliberation. All paid plans are monthly subscriptions."
         }
+      },
+      {
+        "@type": "Question",
+        "name": "How does PrismRAG prevent AI agent hallucination?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "AI agents hallucinate when their retrieval layer returns wrong, ambiguous, or statistically-derived chunks — the agent then reasons from bad inputs. PrismRAG eliminates this by anchoring every chunk to your verified mapping rules. When an agent calls the search tool, it gets chunks whose category placement traces directly to a rule you wrote — not a document co-occurrence statistic. There is no path from retrieval to a hallucinated answer because the knowledge graph itself is built from your ground truth. MCP-native integration means agents use the same verified data store directly, with no intermediate prompt engineering required."
+        }
       }
     ]
   }
@@ -231,6 +239,7 @@
     </a>
     <ul class="nav-links">
       <li><a href="#products">Products</a></li>
+      <li><a href="#agent-hallucination">Anti-hallucination</a></li>
       <li><a href="#how-it-works">How it works</a></li>
       <li><a href="#ml-engine">AI / ML</a></li>
       <li><a href="#deliberation">Deliberation</a></li>
@@ -271,14 +280,14 @@
   <div class="container">
     <div class="hero-layout">
       <div class="hero-copy">
-        <div class="hero-badge">Enterprise AI platform</div>
+        <div class="hero-badge">The fix for AI agent hallucination</div>
         <h1 class="hero-h1">
           Stop letting documents<br/>
           <span class="gradient-text">define your knowledge graph.</span>
         </h1>
         <p class="hero-sub">
-          <strong>PrismRAG</strong> maps your data into <em>your</em> semantic model — auditable rules, personal ML, millisecond search.
-          <strong>Deliberation</strong> runs seven domain experts in parallel, then synthesises agreement, conflict, and insight.
+          AI agents hallucinate when retrieval returns the wrong chunks. <strong>PrismRAG</strong> grounds every chunk in your verified rules — auditable, deterministic, no hallucination path.
+          <strong>Deliberation</strong> runs seven independent domain experts in parallel, then surfaces real conflicts — not hedged single-model prose.
         </p>
         <div class="hero-actions">
           <a href="/register.html" class="btn-hero-primary">
@@ -340,6 +349,10 @@
     <div class="trust-item">
       <div class="trust-value">100%</div>
       <div class="trust-label">Audit traceability</div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-value">Zero</div>
+      <div class="trust-label">Hallucination paths</div>
     </div>
   </div>
 </section>
@@ -451,6 +464,67 @@
         </ul>
         <div class="compare-arrow good">Mapping → Data embedded into it</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ANTI-HALLUCINATION ─────────────────────────────────────────────────── -->
+<section style="padding:96px 0;background:#07070f;" id="agent-hallucination">
+  <div class="container">
+    <div class="section-label" style="color:#f87171;">AI Agent Hallucination</div>
+    <h2 class="section-h2">Your agents are only as good as what they retrieve.</h2>
+    <p class="section-sub">Hallucination isn't a model problem — it's a retrieval problem. When an agent pulls the wrong chunk, it reasons from bad input and produces a confidently wrong answer. PrismRAG closes that gap at the source.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:48px;">
+
+      <div style="background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.18);border-radius:14px;padding:28px;">
+        <div style="font-size:1.4rem;margin-bottom:12px;">⚠️</div>
+        <h3 style="font-size:1rem;font-weight:700;color:#f87171;margin:0 0 12px;">Why agents hallucinate</h3>
+        <ul style="margin:0;padding:0 0 0 18px;color:#94a3b8;font-size:.875rem;line-height:1.8;">
+          <li>Statistical graphs cluster words by co-occurrence — not meaning</li>
+          <li>Wrong community → wrong chunks → wrong answer</li>
+          <li>"bank" near "river" in old docs ruins your finance agent</li>
+          <li>No audit path: can't see why a chunk was retrieved</li>
+          <li>Re-indexing all docs is the only fix — slow and expensive</li>
+        </ul>
+      </div>
+
+      <div style="background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.2);border-radius:14px;padding:28px;">
+        <div style="font-size:1.4rem;margin-bottom:12px;">🛡️</div>
+        <h3 style="font-size:1rem;font-weight:700;color:#34d399;margin:0 0 12px;">The PrismRAG fix</h3>
+        <ul style="margin:0;padding:0 0 0 18px;color:#94a3b8;font-size:.875rem;line-height:1.8;">
+          <li>Every chunk anchored to a rule <em>you</em> wrote — not statistics</li>
+          <li>"bank" → finance cluster because your mapping says so</li>
+          <li>Deterministic: same rule always produces same retrieval</li>
+          <li>Full audit trail from query → community → chunk → rule</li>
+          <li>Fix wrong retrieval: update one rule, re-run one job</li>
+        </ul>
+      </div>
+
+      <div style="background:rgba(108,99,255,.05);border:1px solid rgba(108,99,255,.2);border-radius:14px;padding:28px;">
+        <div style="font-size:1.4rem;margin-bottom:12px;">🤖</div>
+        <h3 style="font-size:1rem;font-weight:700;color:#818cf8;margin:0 0 12px;">MCP-native agent grounding</h3>
+        <p style="color:#94a3b8;font-size:.875rem;line-height:1.7;margin:0 0 16px;">Connect Claude, ChatGPT, or any agent via MCP. One tool call — agent gets your verified chunks, not LLM guesses.</p>
+        <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#a5b4fc;">
+          <span style="color:#64748b;"># Agent calls PrismRAG search</span><br/>
+          search({<br/>
+          &nbsp;&nbsp;"query": "patient drug interaction",<br/>
+          &nbsp;&nbsp;"tenant_id": "your-workspace"<br/>
+          })<br/>
+          <span style="color:#64748b;"># Returns chunks verified</span><br/>
+          <span style="color:#64748b;"># against your medical rules</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:40px;padding:28px 32px;background:linear-gradient(135deg,rgba(52,211,153,.06),rgba(108,99,255,.06));border:1px solid rgba(52,211,153,.2);border-radius:14px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+      <div style="font-size:2rem;flex-shrink:0;">💡</div>
+      <div>
+        <div style="font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:6px;">The key insight</div>
+        <div style="font-size:.9rem;color:#94a3b8;line-height:1.7;">Hallucination happens <em>before</em> the LLM. If retrieval returns the right chunk, the model doesn't need to guess. PrismRAG makes your domain knowledge the retrieval layer — so your agent reasons from your ground truth, not from what happened to be near what in a training corpus.</div>
+      </div>
+      <a href="/register.html" style="flex-shrink:0;padding:12px 24px;background:#34d399;color:#0a0a12;border-radius:8px;font-weight:700;font-size:.875rem;text-decoration:none;white-space:nowrap;">Ground your agents free →</a>
     </div>
   </div>
 </section>

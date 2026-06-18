@@ -72,13 +72,21 @@ def api(base_url):
 
 # ── Auth fixtures ──────────────────────────────────────────────────────────────
 
+QA_PROD_EMAIL    = "qa-prod@insightits.com"
+QA_PROD_PASSWORD = "QaProdPass!2026#"
+_PROD_URL_HINTS  = ("prismrag.insightits.com", "insightits.com")
+
+
 @pytest.fixture(scope="session")
-def qa_credentials(use_seeded):
+def qa_credentials(use_seeded, base_url):
     if use_seeded:
+        is_prod = any(h in base_url for h in _PROD_URL_HINTS)
+        default_email    = QA_PROD_EMAIL    if is_prod else QA_SEEDED_EMAIL
+        default_password = QA_PROD_PASSWORD if is_prod else QA_SEEDED_PASSWORD
         return {
-            "email":    os.environ.get("PRISMRAG_TEST_EMAIL", QA_SEEDED_EMAIL),
-            "password": os.environ.get("PRISMRAG_TEST_PASSWORD", QA_SEEDED_PASSWORD),
-            "name":     "QA Local User",
+            "email":    os.environ.get("PRISMRAG_TEST_EMAIL", default_email),
+            "password": os.environ.get("PRISMRAG_TEST_PASSWORD", default_password),
+            "name":     "QA Seeded User",
         }
     suffix = uuid.uuid4().hex[:8]
     return {
