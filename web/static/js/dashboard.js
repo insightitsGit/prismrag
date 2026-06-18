@@ -255,33 +255,21 @@ async function loadJobs() {
   const list = document.getElementById('jobs-list');
   list.innerHTML = '<div class="loading-state">Loading…</div>';
 
-  // Try to load any tracked job IDs from sessionStorage (set after submit)
-  const trackedRaw = sessionStorage.getItem('prismrag_jobs') || '[]';
-  let tracked = [];
-  try { tracked = JSON.parse(trackedRaw); } catch (_) {}
-
-  if (!tracked.length) {
-    list.innerHTML = '<div class="empty-state"><strong>No jobs this session</strong><p>Submit a job above — it will appear here. Job history resets when you sign out.</p></div>';
+  const r = await apiFetch('/api/v1/prismrag/jobs?limit=50');
+  if (!r || !r.ok) {
+    list.innerHTML = '<div class="empty-state"><strong>Could not load jobs</strong><p>Make sure you are signed in.</p></div>';
     return;
   }
-
-  // Fetch status for each tracked job
-  const rows = await Promise.all(tracked.slice(-20).reverse().map(async id => {
-    const r = await apiFetch(`/api/v1/prismrag/jobs/${id}`);
-    if (!r || !r.ok) return null;
-    return r.json();
-  }));
-
-  const valid = rows.filter(Boolean);
-  if (!valid.length) {
-    list.innerHTML = '<div class="empty-state"><strong>No jobs yet</strong><p>Submit your first ingest job above.</p></div>';
+  const jobs = await r.json();
+  if (!jobs.length) {
+    list.innerHTML = '<div class="empty-state"><strong>No jobs yet</strong><p>Submit your first ingest job above — it will appear here.</p></div>';
     return;
   }
 
   list.innerHTML = `
     <table>
-      <thead><tr><th>Job ID</th><th>Tenant</th><th>Status</th><th>Progress</th><th>Strategy</th><th>Created</th></tr></thead>
-      <tbody>${valid.map(jobRow).join('')}</tbody>
+      <thead><tr><th>Job ID</th><th>Tenant</th><th>Status</th><th>Progress</th><th>Records</th><th>Started</th></tr></thead>
+      <tbody>${jobs.map(jobRow).join('')}</tbody>
     </table>`;
 }
 
@@ -307,8 +295,8 @@ function jobRow(j) {
         <span style="font-size:0.78rem;color:var(--text-dim)">${pct}%</span>
       </div>
     </td>
-    <td><span class="badge badge-gray">${j.strategy || '—'}</span></td>
-    <td>${j.created_at ? new Date(j.created_at).toLocaleDateString() : '—'}</td>
+    <td>${j.records_written ?? 0} / ${j.records_total ?? '?'}</td>
+    <td>${j.started_at ? new Date(j.started_at).toLocaleString() : '—'}</td>
   </tr>`;
 }
 

@@ -103,6 +103,50 @@ def get_job(job_id: str) -> dict | None:
         release_conn(conn)
 
 
+def list_jobs(user_id: str, limit: int = 50) -> list:
+    """Return the most recent ingest jobs for the given user."""
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT j.id, j.tenant_id, j.status, j.records_total, j.records_written,
+                   j.progress_pct, j.error_message, j.started_at, j.finished_at, j.timeout_at
+            FROM prismrag.ingest_job j
+            JOIN prismrag.tenant t ON t.id = j.tenant_id
+            WHERE t.owner_id = %s
+            ORDER BY j.started_at DESC NULLS LAST
+            LIMIT %s
+            """,
+            (user_id, limit),
+        )
+        rows = cur.fetchall()
+        results = []
+        for row in rows:
+            status = row[2]
+            timeout_at = row[9]
+            if status in ("queued", "running") and timeout_at:
+                from datetime import datetime, timezone
+                now = datetime.now(timezone.utc)
+                ta  = timeout_at if hasattr(timeout_at, "tzinfo") else timeout_at.replace(tzinfo=timezone.utc)
+                if now > ta:
+                    status = "stale"
+            results.append({
+                "jobId":          str(row[0]),
+                "tenantId":       str(row[1]),
+                "status":         status,
+                "recordsTotal":   row[3],
+                "recordsWritten": row[4],
+                "progressPct":    row[5],
+                "errorMessage":   row[6],
+                "startedAt":      row[7].isoformat() if row[7] else None,
+                "finishedAt":     row[8].isoformat() if row[8] else None,
+            })
+        return results
+    finally:
+        release_conn(conn)
+
+
 # ── Mapping persistence ───────────────────────────────────────────────────────
 
 def _persist_mapping(tenant_id: str, mapping_config: MappingConfigIn, strategy: str) -> str:

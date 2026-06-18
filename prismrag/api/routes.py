@@ -142,6 +142,27 @@ async def submit_job_file(
     )
 
 
+@router.get("/jobs")
+def list_jobs(limit: int = 50, user: dict = Depends(get_current_user)):
+    """List the most recent ingest jobs for the current user."""
+    from prismrag.pipeline.job import list_jobs as _list_jobs
+    jobs = _list_jobs(user["id"], limit=min(limit, 100))
+    return [
+        {
+            "job_id":          j["jobId"],
+            "tenant_id":       j["tenantId"],
+            "status":          j["status"],
+            "records_total":   j["recordsTotal"],
+            "records_written": j["recordsWritten"],
+            "progress_pct":    j["progressPct"],
+            "error_message":   j["errorMessage"],
+            "started_at":      j["startedAt"],
+            "finished_at":     j["finishedAt"],
+        }
+        for j in jobs
+    ]
+
+
 @router.get("/jobs/{job_id}", response_model=JobStatusResponse)
 def job_status(job_id: str, user: dict = Depends(get_current_user)):
     """Poll job progress (owner only)."""
