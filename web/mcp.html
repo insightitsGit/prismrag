@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MCP Integration — PrismRAG</title>
+  <meta name="description" content="Connect Claude, ChatGPT, and custom AI agents to PrismRAG via the Model Context Protocol (MCP). 9 tools: search, deliberate, manage workspaces, and more — via stdio or HTTP transport."/>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+:root {
+  --bg:        #0a0c14;
+  --bg2:       #0f1117;
+  --surface:   #141720;
+  --surface2:  #1a1d2e;
+  --border:    #252840;
+  --accent:    #7c6af7;
+  --teal:      #2dd4bf;
+  --green:     #48bb78;
+  --yellow:    #ecc94b;
+  --red:       #fc8181;
+  --text:      #e2e8f0;
+  --text-dim:  #8892a4;
+  --text-muted:#4a5568;
+  --radius:    10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:'JetBrains Mono',monospace;font-size:.82em;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--teal)}
+pre{font-family:'JetBrains Mono',monospace;font-size:.8rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;overflow-x:auto;line-height:1.65;color:var(--text-dim)}
+pre code{background:none;border:none;padding:0;color:inherit}
+.c-kw{color:var(--accent)} .c-str{color:var(--teal)} .c-key{color:#e2e8f0} .c-num{color:var(--yellow)} .c-cmt{color:var(--text-muted)} .c-bool{color:#f6ad55}
+h1{font-size:2rem;font-weight:800;line-height:1.2;margin-bottom:12px}
+h2{font-size:1.2rem;font-weight:700;margin:40px 0 14px;padding-top:8px}
+h3{font-size:.95rem;font-weight:700;margin:24px 0 8px;color:var(--text)}
+p{color:var(--text-dim);line-height:1.65;margin-bottom:12px}
+ul{color:var(--text-dim);line-height:1.8;padding-left:20px;margin-bottom:12px}
+
+.topnav{display:flex;align-items:center;height:56px;padding:0 28px;gap:20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.topnav .logo{font-weight:800;font-size:.95rem;color:var(--accent);margin-right:auto}
+.topnav .logo span{color:var(--teal)}
+.topnav a{color:var(--text-dim);font-size:.8125rem}
+.topnav a:hover{color:var(--text)}
+
+.layout{display:grid;grid-template-columns:240px 1fr;flex:1;min-height:0}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:24px 0;position:sticky;top:56px;height:calc(100vh - 56px)}
+.sidebar-section{padding:0 20px 4px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-top:20px}
+.sidebar a{display:block;padding:7px 20px;font-size:.8rem;color:var(--text-dim);border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:var(--text);background:rgba(124,106,247,.08);text-decoration:none}
+.sidebar a.active{color:var(--accent);border-left-color:var(--accent);background:rgba(124,106,247,.1)}
+
+.content{overflow-y:auto;padding:48px 56px;max-width:860px}
+
+.tip{display:flex;gap:10px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);border-radius:var(--radius);padding:14px 16px;margin:16px 0;font-size:.8rem;color:var(--text-dim);line-height:1.55}
+.tip strong{color:var(--teal)}
+.warn{background:rgba(236,201,75,.08);border-color:rgba(236,201,75,.25)}
+.warn strong{color:var(--yellow)}
+
+/* Tool cards */
+.tool-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
+.tool-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.tool-name{font-family:'JetBrains Mono',monospace;font-size:.9rem;font-weight:600;color:var(--teal)}
+.tool-group{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:2px 8px;border-radius:20px;flex-shrink:0;margin-top:2px}
+.grp-rag{background:rgba(124,106,247,.15);color:var(--accent)}
+.grp-delib{background:rgba(45,212,191,.12);color:var(--teal)}
+.tool-desc{font-size:.82rem;color:var(--text-dim);line-height:1.55}
+.tool-params{margin-top:12px}
+.param-row{display:grid;grid-template-columns:160px 80px 1fr;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:.78rem}
+.param-row:last-child{border-bottom:none}
+.param-name{font-family:'JetBrains Mono',monospace;color:var(--teal)}
+.param-type{color:var(--accent)}
+.param-desc{color:var(--text-muted);line-height:1.45}
+.req{color:var(--red)!important}
+.opt{color:var(--green)!important}
+
+/* Transport tabs */
+.transport-tabs{display:flex;gap:4px;margin-bottom:16px}
+.tr-tab{padding:6px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:.8rem;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
+.tr-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tr-panel{display:none}
+.tr-panel.active{display:block}
+
+/* Agent logos */
+.agent-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:20px 0}
+.agent-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.agent-card .icon{font-size:1.6rem;margin-bottom:8px}
+.agent-card .name{font-weight:700;font-size:.875rem;margin-bottom:4px}
+.agent-card .status{font-size:.72rem;color:var(--text-muted)}
+.agent-card .status.ok{color:var(--green)}
+
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{display:none}.content{padding:28px 20px}}
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="logo">⬡ Prism<span>RAG</span></span>
+  <a href="/">Home</a>
+  <a href="/api-docs.html">API Docs</a>
+  <a href="/playground.html">Playground</a>
+  <a href="/docs" target="_blank">OpenAPI ↗</a>
+  <a href="/dashboard.html">Dashboard</a>
+</nav>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">MCP Overview</div>
+    <a href="#overview" class="active">What is MCP?</a>
+    <a href="#agents">Supported agents</a>
+    <a href="#quickstart">Quickstart</a>
+    <a href="#transports">Transports</a>
+
+    <div class="sidebar-section">PrismRAG Tools</div>
+    <a href="#tool-search">search</a>
+    <a href="#tool-list-workspaces">list_workspaces</a>
+    <a href="#tool-list-communities">list_communities</a>
+    <a href="#tool-submit-job">submit_job</a>
+    <a href="#tool-job-status">get_job_status</a>
+    <a href="#tool-bridge">create_bridge</a>
+
+    <div class="sidebar-section">Deliberation Tools</div>
+    <a href="#tool-deliberate">deliberate</a>
+    <a href="#tool-get-session">get_deliberation_session</a>
+    <a href="#tool-followup">deliberation_followup</a>
+
+    <div class="sidebar-section">Resources</div>
+    <a href="/api-docs.html">REST API docs</a>
+    <a href="/playground.html">Try in Playground</a>
+  </nav>
+
+  <main class="content">
+
+    <section id="overview">
+      <p style="color:var(--text-muted);font-size:.8rem;margin-bottom:12px">MCP Integration</p>
+      <h1>Connect AI agents to PrismRAG</h1>
+      <p>PrismRAG ships a built-in <strong>Model Context Protocol (MCP)</strong> server that exposes your knowledge graph and Deliberation engine as tools any MCP-compatible AI agent can call — Claude, ChatGPT, custom agents built on the Claude API, and more.</p>
+      <p>With MCP, your agent can search your domain-specific knowledge base, launch multi-domain deliberation sessions, and manage workspaces — all from within the model's tool-use interface, with no custom integration code.</p>
+
+      <div class="tip">
+        <span>💡</span>
+        <div><strong>No SDK needed.</strong> PrismRAG's MCP server works out of the box with any MCP client. For Claude Code or Claude Desktop, copy the config snippet below. For custom agents, use the HTTP transport endpoint.</div>
+      </div>
+
+      <div class="agent-grid">
+        <div class="agent-card">
+          <div class="icon">🤖</div>
+          <div class="name">Claude</div>
+          <div class="status ok">✓ Supported</div>
+        </div>
+        <div class="agent-card">
+          <div class="icon">🧠</div>
+          <div class="name">Claude Code</div>
+          <div class="status ok">✓ Supported</div>
+        </div>
+        <div class="agent-card">
+          <div class="icon">💬</div>
+          <div class="name">ChatGPT</div>
+          <div class="status ok">✓ Via HTTP</div>
+        </div>
+        <div class="agent-card">
+          <div class="icon">⚙️</div>
+          <div class="name">Custom agents</div>
+          <div class="status ok">✓ HTTP / stdio</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="agents">
+      <h2>9 tools across two products</h2>
+      <p>The MCP server exposes all PrismRAG and Deliberation functionality as named tools. Agents call them the same way they call any other tool — no special handling required.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(124,106,247,.12);color:var(--accent);border:1px solid rgba(124,106,247,.2)">search</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(124,106,247,.12);color:var(--accent);border:1px solid rgba(124,106,247,.2)">list_workspaces</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(124,106,247,.12);color:var(--accent);border:1px solid rgba(124,106,247,.2)">list_communities</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(124,106,247,.12);color:var(--accent);border:1px solid rgba(124,106,247,.2)">submit_job</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(124,106,247,.12);color:var(--accent);border:1px solid rgba(124,106,247,.2)">get_job_status</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(124,106,247,.12);color:var(--accent);border:1px solid rgba(124,106,247,.2)">create_bridge</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(45,212,191,.1);color:var(--teal);border:1px solid rgba(45,212,191,.2)">deliberate</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(45,212,191,.1);color:var(--teal);border:1px solid rgba(45,212,191,.2)">get_deliberation_session</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:4px 10px;border-radius:6px;background:rgba(45,212,191,.1);color:var(--teal);border:1px solid rgba(45,212,191,.2)">deliberation_followup</span>
+      </div>
+    </section>
+
+    <section id="quickstart">
+      <h2>Quickstart — Claude Desktop / Claude Code</h2>
+      <p>Add PrismRAG to your <code>claude_desktop_config.json</code> (Claude Desktop) or <code>.claude/mcp.json</code> (Claude Code). Replace <code>YOUR_TOKEN</code> with your API token from the <a href="/dashboard.html">dashboard</a>.</p>
+
+      <h3>Option A — HTTP transport (recommended)</h3>
+      <pre><code>{
+  <span class="c-key">"mcpServers"</span>: {
+    <span class="c-key">"prismrag"</span>: {
+      <span class="c-key">"transport"</span>: <span class="c-str">"http"</span>,
+      <span class="c-key">"url"</span>:       <span class="c-str">"https://api.prismrag.io/mcp"</span>,
+      <span class="c-key">"headers"</span>: {
+        <span class="c-key">"Authorization"</span>: <span class="c-str">"Bearer YOUR_TOKEN"</span>
+      }
+    }
+  }
+}</code></pre>
+
+      <h3>Option B — stdio transport (local / self-hosted)</h3>
+      <pre><code>{
+  <span class="c-key">"mcpServers"</span>: {
+    <span class="c-key">"prismrag"</span>: {
+      <span class="c-key">"command"</span>: <span class="c-str">"uvx"</span>,
+      <span class="c-key">"args"</span>: [<span class="c-str">"prismrag-mcp"</span>],
+      <span class="c-key">"env"</span>: {
+        <span class="c-key">"PRISMRAG_API_TOKEN"</span>: <span class="c-str">"YOUR_TOKEN"</span>,
+        <span class="c-key">"PRISMRAG_API_URL"</span>:   <span class="c-str">"https://api.prismrag.io"</span>
+      }
+    }
+  }
+}</code></pre>
+
+      <div class="tip">
+        <span>✅</span>
+        <div><strong>Verify it's working:</strong> ask your agent "List my PrismRAG workspaces" — it should call <code>list_workspaces</code> and return your workspace names.</div>
+      </div>
+    </section>
+
+    <section id="transports">
+      <h2>Transport options</h2>
+
+      <div class="transport-tabs">
+        <button class="tr-tab active" onclick="switchTab('http',this)">HTTP (cloud)</button>
+        <button class="tr-tab" onclick="switchTab('stdio',this)">stdio (local)</button>
+        <button class="tr-tab" onclick="switchTab('sdk',this)">Python SDK</button>
+      </div>
+
+      <div class="tr-panel active" id="tp-http">
+        <p>The HTTP transport connects your agent directly to the PrismRAG cloud API. No local installation required. Authentication is via the <code>Authorization: Bearer</code> header.</p>
+        <pre><code><span class="c-cmt"># MCP endpoint</span>
+https://api.prismrag.io/mcp
+
+<span class="c-cmt"># Headers required on every request</span>
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json</code></pre>
+      </div>
+
+      <div class="tr-panel" id="tp-stdio">
+        <p>The stdio transport runs a local process that proxies MCP calls to the PrismRAG API. Useful for self-hosted deployments or air-gapped environments.</p>
+        <pre><code><span class="c-cmt"># Install the MCP server package</span>
+pip install prismrag-mcp
+
+<span class="c-cmt"># Run directly (for testing)</span>
+PRISMRAG_API_TOKEN=YOUR_TOKEN \
+PRISMRAG_API_URL=https://api.prismrag.io \
+python -m prismrag_mcp</code></pre>
+        <div class="tip warn">
+          <span>⚠️</span>
+          <div><strong>Self-hosted:</strong> point <code>PRISMRAG_API_URL</code> at your own instance for on-premises deployments. Enterprise plan required.</div>
+        </div>
+      </div>
+
+      <div class="tr-panel" id="tp-sdk">
+        <p>Use the PrismRAG Python SDK to call MCP tools programmatically from your own agent or workflow.</p>
+        <pre><code>pip install prismrag</code></pre>
+        <pre><code><span class="c-kw">from</span> prismrag <span class="c-kw">import</span> PrismRAGClient
+
+client = PrismRAGClient(token=<span class="c-str">"YOUR_TOKEN"</span>)
+
+<span class="c-cmt"># Search your knowledge base</span>
+results = client.search(
+    query=<span class="c-str">"What are the main risk factors in Q3?"</span>,
+    tenant_id=<span class="c-str">"wsp_01abc..."</span>,
+    top_k=<span class="c-num">10</span>
+)
+
+<span class="c-cmt"># Run a deliberation</span>
+session = client.deliberate(
+    query=<span class="c-str">"Should we proceed with the acquisition?"</span>,
+    tenant_id=<span class="c-str">"wsp_01abc..."</span>
+)
+<span class="c-kw">print</span>(session.synthesis)</code></pre>
+      </div>
+    </section>
+
+    <!-- ── Tool Reference ── -->
+
+    <section id="tool-search">
+      <h2>Tool: <code>search</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div>
+            <div class="tool-name">search</div>
+          </div>
+          <span class="tool-group grp-rag">PrismRAG</span>
+        </div>
+        <div class="tool-desc">Semantic search over a workspace's indexed content. Returns the top-K most relevant chunks with scores and category tags. Use this as the primary retrieval tool — pass results as context to the model for grounded answers.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">query <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Natural language search query</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">tenant_id <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Workspace ID to search within</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">top_k <span class="opt">opt</span></span>
+            <span class="param-type">integer</span>
+            <span class="param-desc">Number of results to return (default: 10, max: 50)</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">strategy <span class="opt">opt</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">"rules" or "mlp" — defaults to workspace strategy</span>
+          </div>
+        </div>
+      </div>
+      <pre><code><span class="c-cmt"># Example agent call (Claude tool-use format)</span>
+{
+  <span class="c-key">"tool"</span>: <span class="c-str">"search"</span>,
+  <span class="c-key">"input"</span>: {
+    <span class="c-key">"query"</span>:     <span class="c-str">"Q3 earnings risk exposure"</span>,
+    <span class="c-key">"tenant_id"</span>: <span class="c-str">"wsp_01abc..."</span>,
+    <span class="c-key">"top_k"</span>:     <span class="c-num">8</span>
+  }
+}
+
+<span class="c-cmt"># Returns</span>
+{
+  <span class="c-key">"results"</span>: [
+    { <span class="c-key">"chunk_id"</span>: <span class="c-str">"chk_..."</span>, <span class="c-key">"text"</span>: <span class="c-str">"..."</span>, <span class="c-key">"score"</span>: <span class="c-num">0.94</span>, <span class="c-key">"categories"</span>: [<span class="c-str">"risk"</span>] }
+  ]
+}</code></pre>
+    </section>
+
+    <section id="tool-list-workspaces">
+      <h2>Tool: <code>list_workspaces</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">list_workspaces</div></div>
+          <span class="tool-group grp-rag">PrismRAG</span>
+        </div>
+        <div class="tool-desc">List all workspaces owned by the authenticated user. Returns workspace IDs, names, and creation dates. Call this first if you don't know the tenant_id.</div>
+      </div>
+      <pre><code><span class="c-cmt"># No parameters required</span>
+{ <span class="c-key">"tool"</span>: <span class="c-str">"list_workspaces"</span>, <span class="c-key">"input"</span>: {} }</code></pre>
+    </section>
+
+    <section id="tool-list-communities">
+      <h2>Tool: <code>list_communities</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">list_communities</div></div>
+          <span class="tool-group grp-rag">PrismRAG</span>
+        </div>
+        <div class="tool-desc">List the semantic communities detected in a workspace. Useful for understanding the knowledge graph structure before searching, or for identifying which communities to bridge.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">tenant_id <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Workspace to inspect</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-submit-job">
+      <h2>Tool: <code>submit_job</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">submit_job</div></div>
+          <span class="tool-group grp-rag">PrismRAG</span>
+        </div>
+        <div class="tool-desc">Submit an ingest job to embed and index new content into a workspace. Pass records as an array of <code>{id, text}</code> objects. Returns a job_id — use <code>get_job_status</code> to poll for completion.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">tenant_id <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Target workspace</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">records <span class="req">*</span></span>
+            <span class="param-type">array</span>
+            <span class="param-desc">Array of <code>{id: string, text: string}</code> objects</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">strategy <span class="opt">opt</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">"rules" (default) or "mlp"</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-job-status">
+      <h2>Tool: <code>get_job_status</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">get_job_status</div></div>
+          <span class="tool-group grp-rag">PrismRAG</span>
+        </div>
+        <div class="tool-desc">Poll an ingest job for status and progress. Returns <code>status</code> (queued / running / completed / failed), <code>progress_pct</code>, and <code>records_written</code> when complete.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">job_id <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Job ID returned by submit_job</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-bridge">
+      <h2>Tool: <code>create_bridge</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">create_bridge</div></div>
+          <span class="tool-group grp-rag">PrismRAG</span>
+        </div>
+        <div class="tool-desc">Create a semantic bridge between two knowledge communities. This enables cross-domain retrieval — queries near one community can traverse the bridge to retrieve content from the other, without retraining the model.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">tenant_id <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Workspace containing the communities</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">community_id_a <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">First community ID</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">community_id_b <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Second community ID</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">label <span class="opt">opt</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Human-readable name for this bridge</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Deliberation tools ── -->
+
+    <section id="tool-deliberate">
+      <h2>Tool: <code>deliberate</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">deliberate</div></div>
+          <span class="tool-group grp-delib">Deliberation</span>
+        </div>
+        <div class="tool-desc">Submit a complex question for multi-domain expert deliberation. This is an async operation — the tool returns a <code>session_id</code> immediately. Use <code>get_deliberation_session</code> to poll for the completed synthesis, domain summaries, agreements, and conflicts.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">query <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">The complex question to deliberate on</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">tenant_id <span class="opt">opt</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Workspace ID — grounds each domain expert in your KB</span>
+          </div>
+        </div>
+      </div>
+      <pre><code><span class="c-cmt"># Typical agent pattern</span>
+<span class="c-num">1</span>. Call <span class="c-str">deliberate</span> → get session_id
+<span class="c-num">2</span>. Poll <span class="c-str">get_deliberation_session</span> every ~5s until status = "completed"
+<span class="c-num">3</span>. Present synthesis + conflicts to the user
+<span class="c-num">4</span>. Use <span class="c-str">deliberation_followup</span> for follow-up questions (no quota charge)</code></pre>
+    </section>
+
+    <section id="tool-get-session">
+      <h2>Tool: <code>get_deliberation_session</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">get_deliberation_session</div></div>
+          <span class="tool-group grp-delib">Deliberation</span>
+        </div>
+        <div class="tool-desc">Retrieve the status and results of a deliberation session. When <code>status: "completed"</code>, the response includes: <code>synthesis</code>, <code>domain_summaries</code>, <code>agreements</code>, <code>conflicts</code>, and <code>domains_discovered</code>.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">session_id <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Session ID from the <code>deliberate</code> call</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-followup">
+      <h2>Tool: <code>deliberation_followup</code></h2>
+      <div class="tool-card">
+        <div class="tool-header">
+          <div><div class="tool-name">deliberation_followup</div></div>
+          <span class="tool-group grp-delib">Deliberation</span>
+        </div>
+        <div class="tool-desc">Ask a follow-up question on a completed deliberation session. The answer is synthesised from the existing domain results — no new deliberation pipeline is run, so <strong>this does not consume your monthly quota</strong>. Ideal for drilling into specific domain conflicts or asking for clarification.</div>
+        <div class="tool-params">
+          <div class="param-row" style="font-size:.68rem;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">
+            <span>Parameter</span><span>Type</span><span>Description</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">session_id <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Completed deliberation session ID</span>
+          </div>
+          <div class="param-row">
+            <span class="param-name">question <span class="req">*</span></span>
+            <span class="param-type">string</span>
+            <span class="param-desc">Follow-up question</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div style="margin-top:64px;padding-top:32px;border-top:1px solid var(--border);font-size:.8rem;color:var(--text-muted)">
+      Questions? <a href="mailto:support@prismrag.io">support@prismrag.io</a> · <a href="/api-docs.html">REST API docs</a> · <a href="/playground.html">Try in Playground</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tr-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tr-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tp-' + id).classList.add('active');
+}
+
+const sections = document.querySelectorAll('section[id]');
+const links = document.querySelectorAll('.sidebar a[href^="#"]');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.sidebar a[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Playground — PrismRAG</title>
+  <meta name="description" content="Try PrismRAG instantly — paste your data, define mappings, and chat with an AI that answers only from your content. No account needed. Session is deleted when you close the tab."/>
+  <link rel="icon" href="/static/favicon.ico"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+/* ── Design tokens (match PrismRAG home) ─────────────────────────────────── */
+:root {
+  --bg:          #0a0c14;
+  --bg2:         #0f1117;
+  --surface:     #141720;
+  --surface2:    #1a1d2e;
+  --border:      #252840;
+  --border2:     #1e2135;
+  --accent:      #7c6af7;
+  --accent-dim:  #4e3fbf;
+  --accent-glow: rgba(124,106,247,.18);
+  --teal:        #2dd4bf;
+  --teal-dim:    rgba(45,212,191,.15);
+  --text:        #e2e8f0;
+  --text-dim:    #8892a4;
+  --text-muted:  #4a5568;
+  --green:       #48bb78;
+  --red:         #fc8181;
+  --yellow:      #ecc94b;
+  --radius:      12px;
+  --shadow:      0 4px 24px rgba(0,0,0,.35);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top nav ─────────────────────────────────────────────────────────────── */
+.topnav {
+  display: flex; align-items: center; height: 56px;
+  padding: 0 28px; gap: 20px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.topnav .logo { font-weight: 800; font-size: .95rem; color: var(--accent); letter-spacing: .3px; margin-right: auto; }
+.topnav .logo span { color: var(--teal); }
+.topnav a { color: var(--text-dim); text-decoration: none; font-size: .8125rem; }
+.topnav a:hover { color: var(--text); }
+.badge-session {
+  background: var(--teal-dim); color: var(--teal);
+  border: 1px solid rgba(45,212,191,.3); border-radius: 20px;
+  padding: 3px 10px; font-size: .7rem; font-weight: 600; letter-spacing: .5px;
+}
+
+/* ── Shell: 3-pane layout ────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: 260px 1fr 380px;
+  grid-template-rows: 1fr;
+  flex: 1;
+  min-height: 0;
+  height: calc(100vh - 56px);
+}
+
+/* ── Left sidebar — steps ────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-inner { overflow-y: auto; flex: 1; padding: 20px 0; }
+.sidebar-label {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text-muted);
+  padding: 0 20px 10px;
+}
+.step-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 20px; cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all .15s;
+}
+.step-item:hover { background: var(--accent-glow); }
+.step-item.active { background: var(--accent-glow); border-left-color: var(--accent); }
+.step-item.done .step-num { background: var(--green); color: #000; }
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 700;
+  background: var(--border); color: var(--text-dim);
+  margin-top: 1px;
+}
+.step-item.active .step-num { background: var(--accent); color: #fff; }
+.step-info {}
+.step-name { font-size: .8125rem; font-weight: 600; }
+.step-desc { font-size: .7rem; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: .7rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.sidebar-footer a { color: var(--text-dim); }
+
+/* ── Main content area ───────────────────────────────────────────────────── */
+.main {
+  overflow-y: auto;
+  padding: 32px 36px;
+  position: relative;
+}
+
+/* Section visibility */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── Tip box ─────────────────────────────────────────────────────────────── */
+.tip {
+  display: flex; gap: 12px;
+  background: var(--teal-dim); border: 1px solid rgba(45,212,191,.25); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 24px; font-size: .8125rem; color: var(--text-dim);
+  line-height: 1.55;
+}
+.tip-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.tip strong { color: var(--teal); }
+
+/* ── Section header ──────────────────────────────────────────────────────── */
+.sec-head { margin-bottom: 24px; }
+.sec-head h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+.sec-head p { color: var(--text-dim); font-size: .875rem; line-height: 1.55; }
+.eyebrow {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--accent); margin-bottom: 6px;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title { font-size: .875rem; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: none; border-radius: 8px; cursor: pointer;
+  font-size: .875rem; font-weight: 600; padding: 10px 20px;
+  transition: all .15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-dim); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+.btn-ghost {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-teal { background: var(--teal); color: #000; }
+.btn-teal:hover { opacity: .88; }
+.btn-danger { background: rgba(252,129,129,.12); border: 1px solid rgba(252,129,129,.3); color: var(--red); }
+
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: .75rem; font-weight: 600;
+  color: var(--text-dim); margin-bottom: 6px; letter-spacing: .3px;
+}
+textarea, input[type=text], select {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 13px; color: var(--text);
+  font-size: .875rem; font-family: inherit; resize: vertical;
+  transition: border-color .15s;
+}
+textarea:focus, input[type=text]:focus, select:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+select { resize: none; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: .8rem; }
+
+/* ── Tabs (input type) ───────────────────────────────────────────────────── */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 16px; }
+.tab-btn {
+  padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-dim); font-size: .8rem;
+  cursor: pointer; transition: all .15s;
+}
+.tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Mapping rows ────────────────────────────────────────────────────────── */
+.mapping-row {
+  display: grid; grid-template-columns: 1fr 1fr auto;
+  gap: 10px; align-items: center; margin-bottom: 10px;
+}
+.mapping-row input { margin: 0; }
+.del-btn {
+  width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-muted); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.del-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.progress-wrap { margin: 16px 0; }
+.progress-label { font-size: .75rem; color: var(--text-dim); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.progress-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--teal)); border-radius: 3px; transition: width .5s ease; }
+
+/* ── Chunk grid (preview after ingest) ──────────────────────────────────── */
+.chunk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; margin-top: 16px; }
+.chunk-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; font-size: .78rem;
+}
+.chunk-card .ch-meta { color: var(--text-muted); font-size: .67rem; margin-bottom: 6px; }
+.chunk-card .ch-text { color: var(--text-dim); line-height: 1.5; }
+.chunk-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 10px;
+  font-size: .65rem; font-weight: 600;
+  background: var(--accent-glow); color: var(--accent); margin-right: 4px;
+}
+
+/* ── Right panel — Chat ──────────────────────────────────────────────────── */
+.chat-panel {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+.chat-header {
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.chat-header h3 { font-size: .875rem; font-weight: 600; }
+.chat-status { font-size: .7rem; color: var(--text-muted); margin-top: 2px; }
+.chat-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .7rem; padding: 4px 10px; border-radius: 20px;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+.dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot.amber { background: var(--yellow); }
+
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.msg { display: flex; gap: 10px; max-width: 100%; }
+.msg.user { flex-direction: row-reverse; }
+.msg-bubble {
+  padding: 10px 13px; border-radius: 10px; font-size: .8125rem; line-height: 1.55;
+  max-width: calc(100% - 40px);
+}
+.msg.user .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 3px; }
+.msg.ai   .msg-bubble { background: var(--surface2); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+.msg-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 700;
+}
+.msg.user .msg-avatar { background: var(--accent); color: #fff; }
+.msg.ai   .msg-avatar { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(45,212,191,.3); }
+
+.sources-bar {
+  margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;
+}
+.src-chip {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 3px 8px; font-size: .67rem; color: var(--text-muted);
+  cursor: pointer;
+}
+.src-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.chat-locked {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; text-align: center; color: var(--text-muted); gap: 12px; font-size: .8rem;
+}
+.chat-locked .lock-icon { font-size: 2rem; }
+.chat-locked p { line-height: 1.55; }
+
+.chat-input-area {
+  padding: 12px 14px; border-top: 1px solid var(--border);
+}
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row textarea {
+  flex: 1; height: 44px; resize: none; padding: 10px 12px; font-size: .8125rem;
+}
+.send-btn {
+  width: 44px; height: 44px; border-radius: 8px; border: none;
+  background: var(--accent); color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+  flex-shrink: 0; transition: background .15s;
+}
+.send-btn:hover { background: var(--accent-dim); }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; }
+.chat-hint { font-size: .67rem; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
+
+/* ── Status banner ───────────────────────────────────────────────────────── */
+.status-banner {
+  display: none; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
+  font-size: .8125rem; font-weight: 500;
+}
+.status-banner.ok  { background: rgba(72,187,120,.12); border: 1px solid rgba(72,187,120,.3); color: var(--green); }
+.status-banner.err { background: rgba(252,129,129,.12); border: 1px solid rgba(252,129,129,.3); color: var(--red); }
+.status-banner.info { background: var(--accent-glow); border: 1px solid rgba(124,106,247,.3); color: var(--accent); }
+
+/* ── Token pill ──────────────────────────────────────────────────────────── */
+.token-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.token {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 10px; font-size: .72rem; color: var(--text-dim);
+}
+.token button {
+  border: none; background: none; color: var(--text-muted); cursor: pointer;
+  font-size: .8rem; line-height: 1; padding: 0;
+}
+.token button:hover { color: var(--red); }
+
+/* ── Typing indicator ────────────────────────────────────────────────────── */
+.typing { display: flex; gap: 4px; padding: 6px 0; }
+.typing span {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  animation: bounce .9s infinite;
+}
+.typing span:nth-child(2) { animation-delay: .15s; }
+.typing span:nth-child(3) { animation-delay: .3s; }
+@keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-8px)} }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media(max-width:1100px){
+  .shell { grid-template-columns: 220px 1fr 340px; }
+}
+@media(max-width:860px){
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+  .sidebar { border-right: none; border-bottom: 1px solid var(--border); height: auto; }
+  .sidebar-inner { overflow: auto; }
+  .chat-panel { height: 380px; border-left: none; border-top: 1px solid var(--border); }
+}
+  </style>
+</head>
+<body>
+
+<!-- ── Topnav ──────────────────────────────────────────────────────────────── -->
+<nav class="topnav">
+  <span class="logo">⬡ Prism<span>RAG</span> Playground</span>
+  <span class="badge-session" id="session-label">SESSION</span>
+  <a href="/">Home</a>
+  <a href="/docs" target="_blank">API Docs</a>
+  <a href="/dashboard.html">Dashboard</a>
+</nav>
+
+<!-- ── Shell ───────────────────────────────────────────────────────────────── -->
+<div class="shell">
+
+  <!-- LEFT: Steps sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+      <div class="sidebar-label">Steps</div>
+
+      <div class="step-item active" data-step="1" onclick="gotoStep(1)">
+        <div class="step-num" id="sn1">1</div>
+        <div class="step-info">
+          <div class="step-name">Add your data</div>
+          <div class="step-desc">Paste text, CSV rows, or JSON records</div>
+        </div>
+      </div>
+
+      <div class="step-item" data-step="2" onclick="gotoStep(2)">
+        <div class="step-num" id="sn2">2</div>
+        <div class="step-info">
+          <div class="step-name">Map categories</div>
+          <div class="step-desc">Tell PrismRAG how to group your content</div>
+        </div>
+      </div>
+
+      <div class="step-item" data-step="3" onclick="gotoStep(3)">
+        <div class="step-num" id="sn3">3</div>
+        <div class="step-info">
+          <div class="step-name">Build index</div>
+          <div class="step-desc">Embed &amp; index via PrismRAG API</div>
+        </div>
+      </div>
+
+      <div class="step-item" data-step="4" onclick="gotoStep(4)">
+        <div class="step-num" id="sn4">4</div>
+        <div class="step-info">
+          <div class="step-name">Chat &amp; explore</div>
+          <div class="step-desc">Query your data using the AI agent</div>
+        </div>
+      </div>
+
+      <div style="height:16px"></div>
+      <div class="sidebar-label">Session</div>
+      <div style="padding: 0 20px">
+        <div style="font-size:.72rem;color:var(--text-muted);line-height:1.5;margin-bottom:12px">
+          This playground creates a temporary workspace. When you close this tab, all data is automatically deleted.
+          Nothing is saved to your account.
+        </div>
+        <button class="btn btn-danger" style="font-size:.75rem;padding:7px 12px;width:100%" onclick="clearSession()">🗑 Clear &amp; restart</button>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      Powered by <strong style="color:var(--accent)">PrismRAG</strong> · Tier 1 rules strategy<br/>
+      <a href="/dashboard.html">Save permanently →</a>
+    </div>
+  </aside>
+
+  <!-- CENTRE: Main content -->
+  <main class="main" id="main">
+
+    <!-- STEP 1: Add data -->
+    <div class="section active" id="sec1">
+      <div class="eyebrow">Step 1 of 4</div>
+      <div class="sec-head">
+        <h2>Add your data</h2>
+        <p>Paste the content you want to search over. This becomes your private knowledge base for this session.</p>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">💡</span>
+        <div><strong>What works great:</strong> product documentation, FAQ pages, policy documents, medical notes, research summaries, customer feedback, support tickets — any text-heavy content you want to query in plain language.</div>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchInputTab('text',this)">Plain text</button>
+        <button class="tab-btn" onclick="switchInputTab('csv',this)">CSV rows</button>
+        <button class="tab-btn" onclick="switchInputTab('json',this)">JSON records</button>
+        <button class="tab-btn" onclick="switchInputTab('samples',this)">Load sample</button>
+      </div>
+
+      <!-- Plain text -->
+      <div class="tab-panel active" id="tab-text">
+        <div class="field">
+          <label>Paste your content below</label>
+          <textarea id="input-text" rows="14" class="mono" placeholder="Paste any text here — articles, documentation, notes, reports…
+
+Each paragraph becomes a searchable chunk. PrismRAG will embed each chunk and build a semantic index so you can ask questions in plain English."></textarea>
+        </div>
+      </div>
+
+      <!-- CSV -->
+      <div class="tab-panel" id="tab-csv">
+        <div class="tip" style="margin-top:0">
+          <span class="tip-icon">📋</span>
+          <div>First row must be column headers. Each data row becomes a searchable record. Tip: include a <code style="color:var(--teal)">text</code> or <code style="color:var(--teal)">description</code> column for best results.</div>
+        </div>
+        <div class="field">
+          <label>CSV data (with header row)</label>
+          <textarea id="input-csv" rows="12" class="mono" placeholder="title,category,description
+Product A,Electronics,High-performance wireless headphones with active noise cancellation
+Product B,Home,Smart thermostat with AI scheduling and energy saving mode
+FAQ-001,Support,How do I reset my password? Go to Settings > Account > Reset Password"></textarea>
+        </div>
+      </div>
+
+      <!-- JSON -->
+      <div class="tab-panel" id="tab-json">
+        <div class="tip" style="margin-top:0">
+          <span class="tip-icon">📦</span>
+          <div>Paste a JSON array of objects. Every object becomes one searchable record. String fields are concatenated for embedding.</div>
+        </div>
+        <div class="field">
+          <label>JSON array of records</label>
+          <textarea id="input-json" rows="12" class="mono" placeholder='[
+  {
+    "id": "1",
+    "title": "Returns Policy",
+    "content": "Items may be returned within 30 days of purchase with original receipt."
+  },
+  {
+    "id": "2",
+    "title": "Shipping Times",
+    "content": "Standard shipping takes 3-5 business days. Express is 1-2 days."
+  }
+]'></textarea>
+        </div>
+      </div>
+
+      <!-- Sample data -->
+      <div class="tab-panel" id="tab-samples">
+        <div class="tip" style="margin-top:0">
+          <span class="tip-icon">🎯</span>
+          <div>Choose a pre-built dataset to explore how PrismRAG handles different domains. These are the same fixtures used in our QA test suite.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:8px">
+          <div class="card" style="cursor:pointer;transition:border-color .15s" onclick="loadSample('healthcare')" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+            <div style="font-size:1.5rem;margin-bottom:8px">🏥</div>
+            <div style="font-weight:600;font-size:.875rem;margin-bottom:4px">Healthcare</div>
+            <div style="font-size:.75rem;color:var(--text-dim)">Clinical notes, drug interactions, diagnosis summaries</div>
+          </div>
+          <div class="card" style="cursor:pointer;transition:border-color .15s" onclick="loadSample('pharmacy')" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+            <div style="font-size:1.5rem;margin-bottom:8px">💊</div>
+            <div style="font-weight:600;font-size:.875rem;margin-bottom:4px">Pharmacy</div>
+            <div style="font-size:.75rem;color:var(--text-dim)">Drug monographs, CYP450 interactions, dosing guidelines</div>
+          </div>
+          <div class="card" style="cursor:pointer;transition:border-color .15s" onclick="loadSample('finance')" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+            <div style="font-size:1.5rem;margin-bottom:8px">📈</div>
+            <div style="font-weight:600;font-size:.875rem;margin-bottom:4px">Finance</div>
+            <div style="font-size:.75rem;color:var(--text-dim)">Analyst reports, DCF models, risk assessments</div>
+          </div>
+          <div class="card" style="cursor:pointer;transition:border-color .15s" onclick="loadSample('support')" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+            <div style="font-size:1.5rem;margin-bottom:8px">💬</div>
+            <div style="font-weight:600;font-size:.875rem;margin-bottom:4px">Customer Support</div>
+            <div style="font-size:.75rem;color:var(--text-dim)">FAQ, return policy, shipping, account help</div>
+          </div>
+        </div>
+        <div id="sample-loaded-msg" style="display:none;margin-top:12px" class="status-banner ok">
+          ✓ Sample loaded — click <strong>Continue</strong> to proceed
+        </div>
+      </div>
+
+      <div id="s1-status" class="status-banner"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="doneStep1()">Continue →</button>
+        <span id="s1-count" style="align-self:center;font-size:.8rem;color:var(--text-muted)"></span>
+      </div>
+    </div>
+
+    <!-- STEP 2: Mappings -->
+    <div class="section" id="sec2">
+      <div class="eyebrow">Step 2 of 4</div>
+      <div class="sec-head">
+        <h2>Map your categories</h2>
+        <p>PrismRAG uses a rules strategy to organise your content into categories before embedding. This improves retrieval precision — especially for domain-specific queries.</p>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">🗂</span>
+        <div>
+          <strong>How mappings work:</strong> each row defines a keyword → category rule.
+          When your content contains that keyword, those chunks get tagged with the category,
+          which PrismRAG uses to route queries to the right neighbourhood of your index.
+          <br/><br/>
+          <strong>Skip this step</strong> if your content is general-purpose — PrismRAG will still work well with semantic-only retrieval.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Category rules <span style="color:var(--text-muted);font-weight:400;font-size:.75rem">— keyword → category</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px">
+          <span style="font-size:.7rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px">Keyword / phrase</span>
+          <span style="font-size:.7rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px">Category slug</span>
+          <span></span>
+        </div>
+        <div id="mapping-rows"></div>
+        <button class="btn btn-ghost" style="margin-top:4px;font-size:.8rem;padding:7px 14px" onclick="addMappingRow()">+ Add rule</button>
+      </div>
+
+      <div class="tip" style="margin-top:8px">
+        <span class="tip-icon">✨</span>
+        <div><strong>Auto-suggest:</strong> based on your data we've suggested some starter rules above. Edit freely or delete all if you want pure semantic search.</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="gotoStep(1)">← Back</button>
+        <button class="btn btn-primary" onclick="doneStep2()">Build index →</button>
+        <button class="btn btn-ghost" onclick="skipMappings()">Skip mappings</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Ingest -->
+    <div class="section" id="sec3">
+      <div class="eyebrow">Step 3 of 4</div>
+      <div class="sec-head">
+        <h2>Building your index</h2>
+        <p>PrismRAG is chunking, embedding, and indexing your content. This usually takes 10–30 seconds.</p>
+      </div>
+
+      <div id="s3-status" class="status-banner"></div>
+
+      <div class="card">
+        <div class="card-title">Indexing progress</div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span id="prog-label">Preparing…</span><span id="prog-pct">0%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+        </div>
+        <div id="ingest-log" style="font-size:.72rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;line-height:1.8;max-height:200px;overflow-y:auto;margin-top:8px"></div>
+      </div>
+
+      <div id="chunks-preview" style="display:none">
+        <div class="card-title" style="margin-top:20px">Indexed chunks <span id="chunk-count" style="color:var(--accent)"></span></div>
+        <div class="chunk-grid" id="chunk-grid"></div>
+      </div>
+
+      <div class="btn-row" id="s3-btns" style="display:none">
+        <button class="btn btn-primary" onclick="gotoStep(4)">Chat with your data →</button>
+        <button class="btn btn-ghost" onclick="gotoStep(2)">← Edit mappings</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Chat intro -->
+    <div class="section" id="sec4">
+      <div class="eyebrow">Step 4 of 4</div>
+      <div class="sec-head">
+        <h2>Chat with your data</h2>
+        <p>Your index is ready. Use the chat panel on the right to ask questions in plain language — PrismRAG retrieves the most relevant chunks and the AI agent synthesises an answer.</p>
+      </div>
+
+      <div class="tip">
+        <span class="tip-icon">🎯</span>
+        <div>
+          <strong>How it works:</strong> every message you send triggers a PrismRAG search that returns the top-K most relevant chunks from your index. The AI then answers <em>only</em> using those chunks — it won't hallucinate facts that aren't in your data.
+          <br/><br/>
+          The <strong>sources</strong> chips below each reply show exactly which chunks were used. Click any chip to see the raw text.
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div class="card">
+          <div style="font-size:1.2rem;margin-bottom:8px">🔍</div>
+          <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">Semantic search</div>
+          <div style="font-size:.75rem;color:var(--text-dim)">Finds relevant content even when exact words differ</div>
+        </div>
+        <div class="card">
+          <div style="font-size:1.2rem;margin-bottom:8px">📌</div>
+          <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">Source-grounded</div>
+          <div style="font-size:.75rem;color:var(--text-dim)">AI answers only from your indexed content</div>
+        </div>
+        <div class="card">
+          <div style="font-size:1.2rem;margin-bottom:8px">⚡</div>
+          <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">Sub-second retrieval</div>
+          <div style="font-size:.75rem;color:var(--text-dim)">HNSW vector index returns top matches in &lt;50ms</div>
+        </div>
+      </div>
+
+      <div class="tip" style="margin-top:20px">
+        <span class="tip-icon">💬</span>
+        <div><strong>Try asking:</strong>
+          <span class="src-chip" style="cursor:pointer;display:inline-block;margin:2px" onclick="sendSuggestion(this)">What are the main topics in my data?</span>
+          <span class="src-chip" style="cursor:pointer;display:inline-block;margin:2px" onclick="sendSuggestion(this)">Summarise the key points</span>
+          <span class="src-chip" style="cursor:pointer;display:inline-block;margin:2px" onclick="sendSuggestion(this)">What does this say about risks?</span>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top:24px">
+        <button class="btn btn-ghost" onclick="gotoStep(3)">← Back to index</button>
+        <button class="btn btn-teal" onclick="newSession()">Start over with new data</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- RIGHT: Chat panel -->
+  <aside class="chat-panel">
+    <div class="chat-header">
+      <div>
+        <h3>RAG Chat</h3>
+        <div class="chat-status" id="chat-status-text">Add data to unlock chat</div>
+      </div>
+      <div class="chat-pill">
+        <div class="dot" id="chat-dot"></div>
+        <span id="chat-pill-label">Not ready</span>
+      </div>
+    </div>
+
+    <div id="chat-locked-view" class="chat-locked">
+      <div class="lock-icon">🔒</div>
+      <p>Complete steps 1–3 to build your index.<br/>Then ask anything about your data here.</p>
+    </div>
+
+    <div id="chat-active-view" style="display:none;flex:1;display:none;flex-direction:column;min-height:0">
+      <div class="chat-messages" id="chat-messages"></div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea id="chat-input" placeholder="Ask anything about your data…" disabled
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendChat()" disabled>➤</button>
+      </div>
+      <div class="chat-hint" id="chat-hint">Index your data first, then chat here.</div>
+    </div>
+  </aside>
+
+</div><!-- /.shell -->
+
+<!-- Source detail modal -->
+<div id="src-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);max-width:640px;width:100%;padding:24px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-weight:600;font-size:.9rem">Source chunk</span>
+      <button onclick="closeSrcModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem">✕</button>
+    </div>
+    <div id="src-modal-content" class="mono" style="font-size:.8rem;color:var(--text-dim);line-height:1.6;white-space:pre-wrap"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── Config ─────────────────────────────────────────────────────────────── */
+const API = '';  // same-origin
+const TOP_K = 5;
+const GEMINI_API_KEY = '';  // set via PRISMRAG_GEMINI_API_KEY env or left empty (server-side proxy used)
+
+/* ── Session state ───────────────────────────────────────────────────────── */
+let SESSION = {
+  step: 1,
+  inputType: 'text',
+  rawText: '',
+  records: [],     // [{id, text, meta}]
+  mappings: [],    // [{keyword, category}]
+  tenantId: null,
+  authToken: null,
+  chunks: [],
+  chatHistory: [],
+  indexed: false,
+};
+
+function saveSession() { try { sessionStorage.setItem('prismrag-pg', JSON.stringify(SESSION)); } catch(_){} }
+function loadSession() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem('prismrag-pg') || 'null');
+    if (s) { SESSION = s; }
+  } catch(_) {}
+}
+
+/* ── Boot ────────────────────────────────────────────────────────────────── */
+loadSession();
+updateSessionLabel();
+
+if (SESSION.indexed && SESSION.tenantId) {
+  setChatReady();
+  gotoStep(4);
+} else if (SESSION.records.length > 0 && SESSION.mappings.length > 0) {
+  gotoStep(3);
+} else if (SESSION.records.length > 0) {
+  buildSuggestedMappings();
+  gotoStep(2);
+}
+
+/* ── On tab close: delete session tenant ─────────────────────────────────── */
+window.addEventListener('beforeunload', () => {
+  if (SESSION.tenantId && SESSION.authToken) {
+    // Use sendBeacon so it fires even on tab close
+    navigator.sendBeacon(
+      `${API}/api/v1/prismrag/tenants/${SESSION.tenantId}`,
+      JSON.stringify({ _method: 'DELETE', token: SESSION.authToken })
+    );
+    // Also try the actual DELETE (for browsers that support it in beacon)
+    fetch(`${API}/api/v1/prismrag/tenants/${SESSION.tenantId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${SESSION.authToken}` },
+      keepalive: true,
+    }).catch(() => {});
+  }
+});
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+function gotoStep(n) {
+  if (n < 1 || n > 4) return;
+  if (n > 1 && SESSION.records.length === 0) { showBanner('s1-status', 'Add some data first.', 'err'); return; }
+  SESSION.step = n;
+  saveSession();
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec' + n).classList.add('active');
+  document.querySelectorAll('.step-item').forEach(el => {
+    const step = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (step === n) el.classList.add('active');
+    else if (step < n) el.classList.add('done');
+    // mark done steps with checkmark
+    const sn = document.getElementById('sn' + step);
+    if (sn) sn.textContent = step < n ? '✓' : step;
+  });
+}
+
+/* ── Input tabs ──────────────────────────────────────────────────────────── */
+function switchInputTab(type, btn) {
+  SESSION.inputType = type;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + type).classList.add('active');
+}
+
+/* ── Sample data ─────────────────────────────────────────────────────────── */
+const SAMPLES = {
+  healthcare: `Patient: John D., 67M with Type 2 Diabetes Mellitus and hypertension.
+Medications: Metformin 1000mg BID, Lisinopril 10mg daily, Atorvastatin 40mg nightly.
+Lab results: HbA1c 7.8% (target <7%), eGFR 62 mL/min, LDL 98 mg/dL.
+Assessment: Glycaemic control suboptimal. Consider increasing Metformin or adding SGLT2 inhibitor.
+
+Patient: Maria S., 45F presenting with chest pain radiating to left arm. ECG: ST elevation in V2-V4.
+Troponin T: 0.85 ng/mL (elevated). Diagnosis: STEMI. Immediate cath lab activation.
+PCI performed, LAD 95% occlusion stented successfully. Post-procedural aspirin + ticagrelor.
+
+Clinical note: Drug allergy documented — Penicillin causes anaphylaxis. Alternative: Azithromycin 500mg.
+Patient reports prior reaction included urticaria, bronchospasm requiring epinephrine 0.3mg IM.
+
+Discharge summary: Patient stable, ambulating independently. Follow-up in 2 weeks cardiology clinic.
+Home medications: Aspirin 81mg, Ticagrelor 90mg BID, Atorvastatin 80mg, Metoprolol 25mg.`,
+
+  pharmacy: `Drug monograph — Warfarin (Coumadin):
+Mechanism: Vitamin K antagonist. Inhibits factors II, VII, IX, X.
+Interactions: Major — Fluconazole (CYP2C9 inhibition, INR increase), Rifampin (CYP induction, INR decrease).
+Monitoring: INR target 2.0–3.0 for AF, 2.5–3.5 for mechanical valves. Weekly until stable.
+Reversal: Vitamin K 10mg IV over 20 min + 4-factor PCC for urgent reversal.
+
+Drug monograph — Metformin:
+Mechanism: Biguanide. Reduces hepatic glucose output, increases insulin sensitivity.
+Renal dosing: eGFR 45–60: use with caution. eGFR <30: contraindicated (lactic acidosis risk).
+Storage: Room temperature 20–25°C. Do not freeze.
+CYP450: Not metabolised by CYP system. No major CYP interactions.
+
+Insulin storage guidelines:
+Unopened: Refrigerate at 2–8°C. Do not freeze. Discard if frozen.
+In-use: Room temperature up to 28 days for most formulations.
+Glargine (Lantus): Do not mix with other insulins — will precipitate.`,
+
+  finance: `Analyst Report — TechCorp Q3 2025:
+Revenue: $2.4B (+18% YoY). EBITDA margin: 24%. Free cash flow: $340M.
+DCF valuation: WACC 9.2%, terminal growth 3.5%. Intrinsic value $142/share vs current $118. Upside 20%.
+Risk factors: Customer concentration (top 5 = 42% revenue), AI chip supply constraints, FX headwinds EUR/USD.
+Recommendation: BUY. Price target $148. Catalyst: Q4 enterprise contract renewals.
+
+VaR Assessment — Fixed Income Portfolio:
+1-day 99% VaR: $2.1M. 10-day 99% VaR: $6.6M. Duration: 5.8 years.
+Stress test: Fed 200bps hike scenario → portfolio loss $18M.
+Correlation: High with IG credit spread widening. Hedge: short TLT ETF 15% notional.
+
+SEC Filing excerpt — Risk factors:
+"The Company faces significant competition in the enterprise software market. We may be unable to
+maintain our current pricing structure if competitors reduce their prices substantially.
+Revenue recognition is subject to complex accounting standards (ASC 606) which may create volatility."`,
+
+  support: `Q: How do I reset my password?
+A: Go to Settings > Account > Security > Reset Password. You will receive an email within 2 minutes.
+If you don't receive the email, check your spam folder or contact support@example.com.
+
+Q: What is your return policy?
+A: Items may be returned within 30 days of purchase in original condition with receipt.
+Digital products are non-refundable once downloaded. Sale items are final sale.
+
+Q: How long does shipping take?
+A: Standard shipping (free over $50): 3-5 business days.
+Express shipping ($9.99): 1-2 business days.
+Same-day delivery available in select cities. Cut-off: 1pm local time.
+
+Q: My order hasn't arrived yet — what do I do?
+A: First, check your tracking number (in your confirmation email). If tracking shows delivered
+but you haven't received it, check with neighbours and your building's mailroom.
+Contact us with your order number if the issue persists — we'll reship or refund.
+
+Q: Can I change or cancel my order?
+A: Orders can be modified or cancelled within 1 hour of placement. After that, the order
+enters fulfilment and changes are not possible. Contact support immediately with your order ID.`
+};
+
+function loadSample(domain) {
+  SESSION.inputType = 'text';
+  SESSION.rawText = SAMPLES[domain];
+  document.getElementById('input-text').value = SAMPLES[domain];
+  switchInputTab('text', document.querySelector('.tab-btn'));
+  const msg = document.getElementById('sample-loaded-msg');
+  msg.style.display = 'block';
+  msg.className = 'status-banner ok';
+  msg.innerHTML = `✓ <strong>${domain.charAt(0).toUpperCase()+domain.slice(1)}</strong> sample loaded — click <strong>Continue</strong> to proceed`;
+  saveSession();
+}
+
+/* ── Step 1 done ─────────────────────────────────────────────────────────── */
+function doneStep1() {
+  const text = getInputText();
+  if (!text.trim()) { showBanner('s1-status', 'Please add some data before continuing.', 'err'); return; }
+  SESSION.records = parseInputToRecords(text, SESSION.inputType);
+  if (SESSION.records.length === 0) { showBanner('s1-status', 'Could not parse any records from your input.', 'err'); return; }
+  document.getElementById('s1-count').textContent = `${SESSION.records.length} record${SESSION.records.length !== 1 ? 's' : ''} detected`;
+  buildSuggestedMappings();
+  saveSession();
+  gotoStep(2);
+}
+
+function getInputText() {
+  const t = SESSION.inputType;
+  if (t === 'text')    return document.getElementById('input-text').value;
+  if (t === 'csv')     return document.getElementById('input-csv').value;
+  if (t === 'json')    return document.getElementById('input-json').value;
+  if (t === 'samples') return document.getElementById('input-text').value;
+  return '';
+}
+
+function parseInputToRecords(raw, type) {
+  if (type === 'json') {
+    try {
+      const arr = JSON.parse(raw.trim());
+      return arr.map((obj, i) => ({
+        id: 'r' + i,
+        text: Object.values(obj).filter(v => typeof v === 'string').join('\n'),
+        meta: obj,
+      }));
+    } catch(_) { return [{ id: 'r0', text: raw, meta: {} }]; }
+  }
+  if (type === 'csv') {
+    const lines = raw.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    return lines.slice(1).map((line, i) => {
+      const vals = line.split(',');
+      const obj = {};
+      headers.forEach((h, j) => { obj[h] = (vals[j] || '').trim(); });
+      return { id: 'r' + i, text: Object.values(obj).join(' '), meta: obj };
+    }).filter(r => r.text.trim());
+  }
+  // plain text: split on double newlines
+  return raw.trim().split(/\n{2,}/).filter(p => p.trim()).map((p, i) => ({
+    id: 'r' + i, text: p.trim(), meta: {},
+  }));
+}
+
+/* ── Auto-suggest mappings from keywords in data ─────────────────────────── */
+const DOMAIN_KEYWORDS = {
+  // medical
+  patient: 'clinical', diagnosis: 'clinical', medication: 'clinical', symptom: 'clinical',
+  drug: 'pharmacy', dosage: 'pharmacy', interaction: 'pharmacy', prescription: 'pharmacy',
+  // finance
+  revenue: 'financial', ebitda: 'financial', valuation: 'financial', risk: 'risk',
+  wacc: 'financial', dcf: 'financial', margin: 'financial',
+  // support
+  return: 'policy', shipping: 'logistics', password: 'account', order: 'orders',
+  cancel: 'orders', refund: 'policy',
+};
+
+function buildSuggestedMappings() {
+  const allText = SESSION.records.map(r => r.text).join(' ').toLowerCase();
+  const found = new Map();
+  Object.entries(DOMAIN_KEYWORDS).forEach(([kw, cat]) => {
+    if (allText.includes(kw) && !found.has(kw)) found.set(kw, cat);
+  });
+  SESSION.mappings = Array.from(found.entries()).slice(0, 8).map(([k,c]) => ({ keyword: k, category: c }));
+  renderMappingRows();
+}
+
+function renderMappingRows() {
+  const container = document.getElementById('mapping-rows');
+  container.innerHTML = '';
+  SESSION.mappings.forEach((m, i) => addMappingRow(m.keyword, m.category));
+  if (SESSION.mappings.length === 0) addMappingRow('', '');
+}
+
+function addMappingRow(kw = '', cat = '') {
+  const container = document.getElementById('mapping-rows');
+  const div = document.createElement('div');
+  div.className = 'mapping-row';
+  div.innerHTML = `
+    <input type="text" placeholder="keyword or phrase" value="${esc(kw)}" oninput="syncMappings()"/>
+    <input type="text" placeholder="category slug" value="${esc(cat)}" oninput="syncMappings()"/>
+    <button class="del-btn" onclick="this.closest('.mapping-row').remove();syncMappings()">×</button>
+  `;
+  container.appendChild(div);
+}
+
+function syncMappings() {
+  SESSION.mappings = [];
+  document.querySelectorAll('.mapping-row').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const kw = inputs[0].value.trim();
+    const cat = inputs[1].value.trim();
+    if (kw && cat) SESSION.mappings.push({ keyword: kw, category: cat });
+  });
+}
+
+/* ── Step 2 done ─────────────────────────────────────────────────────────── */
+function doneStep2() { syncMappings(); saveSession(); runIngest(); gotoStep(3); }
+function skipMappings() { SESSION.mappings = []; saveSession(); runIngest(); gotoStep(3); }
+
+/* ── Ingest pipeline ─────────────────────────────────────────────────────── */
+let ingestInterval = null;
+
+async function runIngest() {
+  setProgress(0, 'Initialising session…');
+  log('▶ Starting playground ingest session');
+  try {
+    // 1. Ensure we have a guest token
+    await ensureGuestAuth();
+    setProgress(10, 'Creating session workspace…');
+    log('✓ Auth token obtained');
+
+    // 2. Create ephemeral tenant
+    SESSION.tenantId = await createEphemeralTenant();
+    saveSession();
+    setProgress(20, 'Workspace created');
+    log(`✓ Tenant created: ${SESSION.tenantId.slice(0,8)}…`);
+
+    // 3. Register mapping version
+    if (SESSION.mappings.length > 0) {
+      await registerMappings(SESSION.tenantId, SESSION.mappings);
+      log(`✓ ${SESSION.mappings.length} category rule(s) applied`);
+    } else {
+      log('ℹ No category rules — using pure semantic search');
+    }
+    setProgress(35, 'Submitting ingest job…');
+
+    // 4. Submit ingest job
+    const jobId = await submitIngestJob(SESSION.tenantId, SESSION.records);
+    log(`✓ Ingest job submitted: ${jobId.slice(0,8)}…`);
+    setProgress(45, 'Embedding & indexing…');
+
+    // 5. Poll job until done
+    await pollJob(jobId);
+
+    // 6. Fetch chunks
+    setProgress(90, 'Loading indexed chunks…');
+    SESSION.chunks = await fetchChunks(SESSION.tenantId);
+    log(`✓ ${SESSION.chunks.length} chunk(s) indexed`);
+    setProgress(100, 'Ready!');
+    SESSION.indexed = true;
+    saveSession();
+
+    showBanner('s3-status', `✓ Index built — ${SESSION.chunks.length} chunks ready for chat.`, 'ok');
+    renderChunkPreview(SESSION.chunks);
+    document.getElementById('s3-btns').style.display = 'flex';
+    setChatReady();
+
+  } catch (err) {
+    showBanner('s3-status', `Error: ${err.message}`, 'err');
+    log(`✗ ${err.message}`);
+  }
+}
+
+function setProgress(pct, label) {
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = label;
+  document.getElementById('prog-pct').textContent = pct + '%';
+}
+
+function log(msg) {
+  const el = document.getElementById('ingest-log');
+  el.innerHTML += `<div>${esc(msg)}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ── API calls ───────────────────────────────────────────────────────────── */
+async function ensureGuestAuth() {
+  if (SESSION.authToken) return;
+  // Try to use a stored token from login
+  const stored = localStorage.getItem('prismrag_token');
+  if (stored) { SESSION.authToken = stored; return; }
+
+  // Register a throw-away guest account for this session
+  const guestEmail = `pg-${Date.now()}-${Math.random().toString(36).slice(2,8)}@playground.prismrag.internal`;
+  const guestPass  = 'PG' + Math.random().toString(36).slice(2,12) + '!';
+  const res = await apiFetch('/api/v1/auth/register', {
+    method: 'POST', body: JSON.stringify({ email: guestEmail, password: guestPass, full_name: 'Playground' }),
+  });
+  if (!res.ok) throw new Error('Guest auth failed: ' + await res.text());
+  const data = await res.json();
+  SESSION.authToken = data.token;
+  // store email+pass for session refresh
+  sessionStorage.setItem('pg-guest-email', guestEmail);
+  sessionStorage.setItem('pg-guest-pass', guestPass);
+}
+
+async function createEphemeralTenant() {
+  const res = await authFetch('/api/v1/prismrag/tenants', {
+    method: 'POST', body: JSON.stringify({ name: 'playground-' + Date.now() }),
+  });
+  if (!res.ok) {
+    // Free plan limit: try to find & reuse an existing playground tenant
+    const listRes = await authFetch('/api/v1/prismrag/tenants');
+    if (listRes.ok) {
+      const tenants = await listRes.json();
+      const pg = tenants.find(t => t.name && t.name.startsWith('playground-'));
+      if (pg) return pg.tenant_id || pg.id;
+    }
+    throw new Error('Could not create session workspace: ' + await res.text());
+  }
+  const d = await res.json();
+  return d.tenant_id || d.id;
+}
+
+async function registerMappings(tenantId, mappings) {
+  // POST a rules-based mapping version
+  const body = {
+    tenant_id: tenantId,
+    strategy: 'rules',
+    categories: mappings.map(m => ({ category_slug: m.category, words: [{ word: m.keyword, weight: 1.0 }] })),
+  };
+  const res = await authFetch('/api/v1/prismrag/mappings', { method: 'POST', body: JSON.stringify(body) });
+  // Non-fatal if mapping endpoint not available
+  if (!res.ok) { log('ℹ Mapping API unavailable — using fallback'); }
+}
+
+async function submitIngestJob(tenantId, records) {
+  const body = {
+    tenant_id: tenantId,
+    strategy: SESSION.mappings.length > 0 ? 'rules' : 'semantic',
+    source_type: 'inline',
+    records: records.map(r => ({ id: r.id, text: r.text, metadata: r.meta })),
+  };
+  const res = await authFetch('/api/v1/prismrag/jobs', { method: 'POST', body: JSON.stringify(body) });
+  if (!res.ok) throw new Error('Ingest failed: ' + await res.text());
+  const d = await res.json();
+  return d.job_id;
+}
+
+async function pollJob(jobId) {
+  const maxWait = 120; let waited = 0;
+  return new Promise((resolve, reject) => {
+    const tick = async () => {
+      try {
+        const res = await authFetch(`/api/v1/prismrag/jobs/${jobId}`);
+        if (!res.ok) { reject(new Error('Job poll failed')); return; }
+        const d = await res.json();
+        const pct = 45 + Math.round((d.progress_pct || 0) * 0.45);
+        setProgress(pct, `Indexing… ${d.progress_pct || 0}%`);
+        if (d.status === 'completed' || d.status === 'done') { resolve(); return; }
+        if (d.status === 'failed' || d.status === 'stale')  { reject(new Error('Ingest job failed')); return; }
+        waited += 3;
+        if (waited > maxWait) { reject(new Error('Index timed out — try smaller data')); return; }
+        setTimeout(tick, 3000);
+      } catch(e) { reject(e); }
+    };
+    tick();
+  });
+}
+
+async function fetchChunks(tenantId) {
+  const res = await authFetch(`/api/v1/prismrag/chunks?tenant_id=${encodeURIComponent(tenantId)}&limit=20`);
+  if (!res.ok) return [];
+  const d = await res.json();
+  return Array.isArray(d) ? d : (d.chunks || []);
+}
+
+/* ── Chat ────────────────────────────────────────────────────────────────── */
+function setChatReady() {
+  document.getElementById('chat-locked-view').style.display = 'none';
+  const av = document.getElementById('chat-active-view');
+  av.style.display = 'flex';
+  document.getElementById('chat-input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('chat-status-text').textContent = `${SESSION.chunks.length || '?'} chunks indexed`;
+  document.getElementById('chat-dot').className = 'dot green';
+  document.getElementById('chat-pill-label').textContent = 'Ready';
+  document.getElementById('chat-hint').textContent = 'Press Enter to send · Shift+Enter for newline';
+
+  // Restore history
+  if (SESSION.chatHistory.length > 0) {
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = '';
+    SESSION.chatHistory.forEach(m => appendMsg(m.role, m.content, m.sources));
+  } else {
+    // Welcome message
+    appendMsg('ai', `Your index is ready! I've processed **${SESSION.chunks.length || 'your'} chunks** from your data.\n\nAsk me anything — I'll search your content and give you a grounded answer with source references.`, []);
+  }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const query = input.value.trim();
+  if (!query || !SESSION.indexed) return;
+  input.value = '';
+  input.style.height = '44px';
+
+  appendMsg('user', query, []);
+  SESSION.chatHistory.push({ role: 'user', content: query, sources: [] });
+
+  const typingId = appendTyping();
+  document.getElementById('send-btn').disabled = true;
+
+  try {
+    // 1. Search PrismRAG
+    const results = await searchPrismRAG(query);
+    const sources = results.map(r => ({
+      id: r.chunk_id || r.id,
+      text: r.text || r.content,
+      score: r.score,
+      categories: r.categories || [],
+    }));
+
+    // 2. Build context and call Gemini via server-side proxy
+    const context = sources.map((s, i) => `[${i+1}] ${s.text}`).join('\n\n');
+    const answer = await callChatProxy(query, context, sources);
+
+    removeTyping(typingId);
+    appendMsg('ai', answer, sources);
+    SESSION.chatHistory.push({ role: 'ai', content: answer, sources });
+    saveSession();
+
+  } catch (err) {
+    removeTyping(typingId);
+    appendMsg('ai', `Search error: ${err.message}. Make sure your index is ready.`, []);
+  } finally {
+    document.getElementById('send-btn').disabled = false;
+  }
+}
+
+async function searchPrismRAG(query) {
+  const res = await authFetch('/api/v1/prismrag/search', {
+    method: 'POST',
+    body: JSON.stringify({
+      query,
+      tenant_id: SESSION.tenantId,
+      top_k: TOP_K,
+      strategy: SESSION.mappings.length > 0 ? 'rules' : 'semantic',
+    }),
+  });
+  if (!res.ok) throw new Error('Search failed (' + res.status + ')');
+  const d = await res.json();
+  return d.results || d || [];
+}
+
+async function callChatProxy(query, context, sources) {
+  // Use PrismRAG server-side deliberation proxy (no Gemini key needed client-side)
+  const res = await authFetch('/api/v1/prismrag/playground/chat', {
+    method: 'POST',
+    body: JSON.stringify({ query, context, tenant_id: SESSION.tenantId }),
+  });
+  if (res.ok) {
+    const d = await res.json();
+    return d.answer || d.response || d.content || 'No answer returned.';
+  }
+  // Fallback: format the sources as a structured answer without LLM
+  if (!sources.length) return 'No relevant content found in your index for that query.';
+  const top3 = sources.slice(0, 3);
+  return `Based on your indexed content:\n\n` +
+    top3.map((s, i) => `**[${i+1}]** ${s.text.slice(0, 280).replace(/\n/g, ' ')}${s.text.length > 280 ? '…' : ''}`).join('\n\n') +
+    `\n\n*${sources.length} source(s) retrieved from your index.*`;
+}
+
+function sendSuggestion(el) {
+  if (!SESSION.indexed) { return; }
+  document.getElementById('chat-input').value = el.textContent;
+  sendChat();
+}
+
+/* ── Chat UI ─────────────────────────────────────────────────────────────── */
+let _typingCounter = 0;
+
+function appendMsg(role, content, sources = []) {
+  const container = document.getElementById('chat-messages');
+  const msgEl = document.createElement('div');
+  msgEl.className = `msg ${role}`;
+  const avatar = role === 'user' ? 'You' : 'AI';
+  const initials = role === 'user' ? 'U' : '⬡';
+
+  // Render markdown-lite (bold + newlines)
+  const rendered = renderMd(content);
+
+  let sourcesHtml = '';
+  if (sources && sources.length > 0) {
+    const chips = sources.map((s, i) =>
+      `<span class="src-chip" onclick="showSource(${i})" title="Score: ${(s.score||0).toFixed(3)}">
+        ${s.categories && s.categories[0] ? '· '+s.categories[0]+' ' : ''}chunk ${i+1}
+      </span>`).join('');
+    sourcesHtml = `<div class="sources-bar">${chips}</div>`;
+    // store for showSource
+    msgEl.dataset.sources = JSON.stringify(sources.map(s => s.text));
+  }
+
+  msgEl.innerHTML = `
+    <div class="msg-avatar">${initials}</div>
+    <div>
+      <div class="msg-bubble">${rendered}${sourcesHtml}</div>
+    </div>`;
+
+  container.appendChild(msgEl);
+  container.scrollTop = container.scrollHeight;
+  return msgEl;
+}
+
+function appendTyping() {
+  const id = 'typing-' + (++_typingCounter);
+  const container = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.id = id;
+  el.className = 'msg ai';
+  el.innerHTML = `<div class="msg-avatar">⬡</div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function renderMd(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br/>');
+}
+
+/* ── Source modal ────────────────────────────────────────────────────────── */
+let _activeSources = [];
+function showSource(idx) {
+  // find closest msg with data-sources
+  const modal = document.getElementById('src-modal');
+  const el = document.getElementById('chat-messages');
+  const msgs = [...el.querySelectorAll('[data-sources]')];
+  // Get the text from the most recent message that has sources
+  const last = msgs[msgs.length - 1];
+  if (!last) return;
+  try {
+    const srcs = JSON.parse(last.dataset.sources);
+    document.getElementById('src-modal-content').textContent = srcs[idx] || '(empty)';
+    modal.style.display = 'flex';
+  } catch(_) {}
+}
+function closeSrcModal() { document.getElementById('src-modal').style.display = 'none'; }
+document.getElementById('src-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('src-modal')) closeSrcModal();
+});
+
+/* ── Chunk preview ───────────────────────────────────────────────────────── */
+function renderChunkPreview(chunks) {
+  if (!chunks.length) return;
+  const preview = document.getElementById('chunks-preview');
+  const grid = document.getElementById('chunk-grid');
+  document.getElementById('chunk-count').textContent = `(${chunks.length})`;
+  grid.innerHTML = chunks.slice(0, 12).map(c => `
+    <div class="chunk-card">
+      <div class="ch-meta">
+        ${(c.categories || []).map(cat => `<span class="chunk-badge">${esc(cat)}</span>`).join('')}
+        chunk #${c.chunk_index ?? '?'}
+      </div>
+      <div class="ch-text">${esc((c.text || c.content || '').slice(0, 160))}${((c.text||c.content||'').length > 160 ? '…' : '')}</div>
+    </div>`).join('');
+  preview.style.display = 'block';
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+function apiFetch(path, opts = {}) {
+  return fetch(API + path, {
+    headers: { 'Content-Type': 'application/json', ...(opts.headers||{}) },
+    ...opts,
+  });
+}
+
+function authFetch(path, opts = {}) {
+  return fetch(API + path, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SESSION.authToken}`,
+      ...(opts.headers||{}),
+    },
+    ...opts,
+  });
+}
+
+function showBanner(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'status-banner ' + type;
+  el.style.display = 'block';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateSessionLabel() {
+  const el = document.getElementById('session-label');
+  if (SESSION.tenantId) {
+    el.textContent = 'SESSION · ' + SESSION.tenantId.slice(0,6).toUpperCase();
+    el.style.background = 'rgba(72,187,120,.12)';
+    el.style.color = 'var(--green)';
+    el.style.borderColor = 'rgba(72,187,120,.3)';
+  }
+}
+
+function clearSession() {
+  if (!confirm('Clear all data and start over?')) return;
+  sessionStorage.removeItem('prismrag-pg');
+  SESSION = { step:1, inputType:'text', rawText:'', records:[], mappings:[], tenantId:null, authToken:null, chunks:[], chatHistory:[], indexed:false };
+  window.location.reload();
+}
+
+function newSession() {
+  clearSession();
+}
+
+// Auto-resize chat textarea
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = '44px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+</script>
+</body>
+</html>

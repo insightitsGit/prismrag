@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>API Reference — PrismRAG</title>
+  <meta name="description" content="PrismRAG REST API reference. Authenticate, create workspaces, ingest documents, run semantic search, and launch Deliberation sessions. Full OpenAPI spec available at /docs."/>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+:root {
+  --bg:        #0a0c14;
+  --bg2:       #0f1117;
+  --surface:   #141720;
+  --surface2:  #1a1d2e;
+  --border:    #252840;
+  --accent:    #7c6af7;
+  --accent-dim:#4e3fbf;
+  --teal:      #2dd4bf;
+  --text:      #e2e8f0;
+  --text-dim:  #8892a4;
+  --text-muted:#4a5568;
+  --green:     #48bb78;
+  --red:       #fc8181;
+  --yellow:    #ecc94b;
+  --radius:    10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:'JetBrains Mono',monospace;font-size:.82em;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--teal)}
+pre{font-family:'JetBrains Mono',monospace;font-size:.8rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;overflow-x:auto;line-height:1.65;color:var(--text-dim)}
+pre code{background:none;border:none;padding:0;color:inherit}
+.c-kw{color:var(--accent)} .c-str{color:var(--teal)} .c-key{color:#e2e8f0} .c-num{color:var(--yellow)} .c-cmt{color:var(--text-muted)}
+h1{font-size:2rem;font-weight:800;line-height:1.2;margin-bottom:12px}
+h2{font-size:1.25rem;font-weight:700;margin:40px 0 14px;padding-top:8px}
+h3{font-size:1rem;font-weight:700;margin:28px 0 10px}
+p{color:var(--text-dim);line-height:1.65;margin-bottom:12px}
+ul{color:var(--text-dim);line-height:1.8;padding-left:20px;margin-bottom:12px}
+
+/* Layout */
+.topnav{display:flex;align-items:center;height:56px;padding:0 28px;gap:20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.topnav .logo{font-weight:800;font-size:.95rem;color:var(--accent);margin-right:auto}
+.topnav .logo span{color:var(--teal)}
+.topnav a{color:var(--text-dim);font-size:.8125rem}
+.topnav a:hover{color:var(--text)}
+
+.layout{display:grid;grid-template-columns:240px 1fr;flex:1;min-height:0}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:24px 0;position:sticky;top:56px;height:calc(100vh - 56px)}
+.sidebar-section{padding:0 20px 4px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-top:20px}
+.sidebar a{display:block;padding:7px 20px;font-size:.8rem;color:var(--text-dim);border-left:2px solid transparent;transition:all .15s}
+.sidebar a:hover{color:var(--text);background:rgba(124,106,247,.08);text-decoration:none}
+.sidebar a.active{color:var(--accent);border-left-color:var(--accent);background:rgba(124,106,247,.1)}
+
+.content{overflow-y:auto;padding:48px 56px;max-width:860px}
+
+/* Method badges */
+.method{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:700;font-family:'JetBrains Mono',monospace;margin-right:8px;letter-spacing:.5px}
+.GET{background:rgba(72,187,120,.15);color:var(--green)}
+.POST{background:rgba(124,106,247,.2);color:var(--accent)}
+.PATCH{background:rgba(236,201,75,.15);color:var(--yellow)}
+.DELETE{background:rgba(252,129,129,.15);color:var(--red)}
+
+.endpoint{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:20px}
+.endpoint-title{display:flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:.875rem;font-weight:500;color:var(--text);margin-bottom:8px;flex-wrap:wrap;gap:6px}
+.endpoint-desc{font-size:.82rem;color:var(--text-dim);line-height:1.55;margin-bottom:0}
+
+.params-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.8rem}
+.params-table th{text-align:left;padding:6px 12px;color:var(--text-muted);font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)}
+.params-table td{padding:8px 12px;border-bottom:1px solid var(--border2,#1e2135);color:var(--text-dim);vertical-align:top}
+.params-table td:first-child{font-family:'JetBrains Mono',monospace;color:var(--teal);font-size:.78rem;white-space:nowrap}
+.params-table td:nth-child(2){color:var(--accent);font-size:.75rem;white-space:nowrap}
+.req-badge{display:inline-block;font-size:.6rem;padding:1px 5px;border-radius:3px;background:rgba(252,129,129,.15);color:var(--red);font-weight:700;margin-left:4px}
+.opt-badge{display:inline-block;font-size:.6rem;padding:1px 5px;border-radius:3px;background:rgba(72,187,120,.1);color:var(--green);font-weight:700;margin-left:4px}
+
+.tip{display:flex;gap:10px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);border-radius:var(--radius);padding:14px 16px;margin:16px 0;font-size:.8rem;color:var(--text-dim);line-height:1.55}
+.tip strong{color:var(--teal)}
+.warn{background:rgba(236,201,75,.08);border-color:rgba(236,201,75,.25)}
+.warn strong{color:var(--yellow)}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:600;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);margin:2px}
+
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .content{padding:28px 20px}
+}
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="logo">⬡ Prism<span>RAG</span></span>
+  <a href="/">Home</a>
+  <a href="/mcp.html">MCP</a>
+  <a href="/playground.html">Playground</a>
+  <a href="/docs" target="_blank">OpenAPI ↗</a>
+  <a href="/dashboard.html">Dashboard</a>
+</nav>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">Getting started</div>
+    <a href="#overview" class="active">Overview</a>
+    <a href="#auth">Authentication</a>
+    <a href="#errors">Errors & rate limits</a>
+    <a href="#base-url">Base URL</a>
+
+    <div class="sidebar-section">PrismRAG</div>
+    <a href="#workspaces">Workspaces</a>
+    <a href="#mappings">Mappings</a>
+    <a href="#ingest">Ingest jobs</a>
+    <a href="#search">Search</a>
+    <a href="#communities">Communities</a>
+    <a href="#bridges">Bridge vectors</a>
+
+    <div class="sidebar-section">Deliberation</div>
+    <a href="#delib-create">Create session</a>
+    <a href="#delib-run">Run pipeline</a>
+    <a href="#delib-poll">Poll & retrieve</a>
+    <a href="#delib-followup">Follow-up</a>
+
+    <div class="sidebar-section">Account</div>
+    <a href="#account-me">Profile</a>
+    <a href="#account-usage">Usage</a>
+    <a href="#billing">Billing</a>
+
+    <div class="sidebar-section">Resources</div>
+    <a href="/docs" target="_blank">Full OpenAPI spec ↗</a>
+    <a href="/mcp.html">MCP integration</a>
+    <a href="/playground.html">Playground</a>
+  </nav>
+
+  <main class="content">
+
+    <!-- ── Overview ── -->
+    <section id="overview">
+      <p style="color:var(--text-muted);font-size:.8rem;margin-bottom:12px">API Reference</p>
+      <h1>PrismRAG API</h1>
+      <p>PrismRAG is an API-first platform. Everything available in the dashboard is also available via REST — workspace creation, document ingestion, semantic search, mapping management, and Deliberation sessions.</p>
+      <p>The full machine-readable specification is available at <a href="/docs" target="_blank">/docs</a> (Swagger UI) and <a href="/openapi.json" target="_blank">/openapi.json</a>.</p>
+
+      <div class="tip">
+        <span>💡</span>
+        <div><strong>Quickstart:</strong> Register → get a JWT → create a workspace → ingest documents → search. See the <a href="/playground.html">Playground</a> to try it instantly with no code.</div>
+      </div>
+    </section>
+
+    <!-- ── Base URL ── -->
+    <section id="base-url">
+      <h2>Base URL</h2>
+      <pre><code>https://api.prismrag.io/api/v1</code></pre>
+      <p>All endpoints below are relative to this base. The API is versioned — <code>v1</code> is stable and will not receive breaking changes without a version bump.</p>
+    </section>
+
+    <!-- ── Auth ── -->
+    <section id="auth">
+      <h2>Authentication</h2>
+      <p>All protected endpoints require a <strong>Bearer JWT</strong> in the <code>Authorization</code> header.</p>
+
+      <h3>Register</h3>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/auth/register</div>
+        <div class="endpoint-desc">Create a new account. Returns a JWT on success.</div>
+      </div>
+      <pre><code><span class="c-cmt"># Request</span>
+{
+  <span class="c-key">"email"</span>:     <span class="c-str">"you@company.com"</span>,
+  <span class="c-key">"password"</span>:  <span class="c-str">"YourPassword123!"</span>,
+  <span class="c-key">"full_name"</span>: <span class="c-str">"Ada Lovelace"</span>        <span class="c-cmt">// optional</span>
+}
+
+<span class="c-cmt"># Response 201</span>
+{
+  <span class="c-key">"token"</span>: <span class="c-str">"eyJhbGci..."</span>,
+  <span class="c-key">"email"</span>: <span class="c-str">"you@company.com"</span>
+}</code></pre>
+
+      <h3>Login</h3>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/auth/login</div>
+        <div class="endpoint-desc">Exchange email + password for a JWT.</div>
+      </div>
+      <pre><code>curl -X POST https://api.prismrag.io/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@company.com","password":"YourPassword123!"}'</code></pre>
+
+      <h3>Using the token</h3>
+      <pre><code>curl https://api.prismrag.io/api/v1/auth/me \
+  -H "Authorization: Bearer eyJhbGci..."</code></pre>
+
+      <div class="tip warn">
+        <span>⚠️</span>
+        <div><strong>Token lifetime:</strong> JWTs expire after 30 days. Re-authenticate using <code>POST /auth/login</code> to get a fresh token. Enterprise plans can request service-account tokens with configurable expiry.</div>
+      </div>
+    </section>
+
+    <!-- ── Errors ── -->
+    <section id="errors">
+      <h2>Errors &amp; rate limits</h2>
+      <table class="params-table">
+        <tr><th>Code</th><th>Meaning</th></tr>
+        <tr><td>400</td><td>Bad request — check your JSON body</td></tr>
+        <tr><td>401</td><td>Missing or expired token</td></tr>
+        <tr><td>402</td><td>Plan limit reached — upgrade or wait for reset</td></tr>
+        <tr><td>403</td><td>Forbidden — you don't own this resource</td></tr>
+        <tr><td>404</td><td>Resource not found</td></tr>
+        <tr><td>422</td><td>Validation error — see <code>detail</code> array</td></tr>
+        <tr><td>429</td><td>Rate limit exceeded — back off and retry</td></tr>
+        <tr><td>500</td><td>Server error — contact support if persistent</td></tr>
+      </table>
+
+      <p>Rate limits are enforced per API key per minute. Retry with exponential backoff on <code>429</code>. The <code>Retry-After</code> header gives the reset time in seconds.</p>
+    </section>
+
+    <!-- ── Workspaces ── -->
+    <section id="workspaces">
+      <h2>Workspaces</h2>
+      <p>A workspace (tenant) is an isolated knowledge graph. All ingested content, mappings, communities, and search results are scoped to a workspace.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/prismrag/tenants</div>
+        <div class="endpoint-desc">Create a new workspace.</div>
+      </div>
+      <pre><code>{ <span class="c-key">"name"</span>: <span class="c-str">"My Knowledge Base"</span> }
+
+<span class="c-cmt"># Response</span>
+{ <span class="c-key">"tenant_id"</span>: <span class="c-str">"wsp_01abc..."</span>, <span class="c-key">"name"</span>: <span class="c-str">"My Knowledge Base"</span> }</code></pre>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/prismrag/tenants</div>
+        <div class="endpoint-desc">List all workspaces owned by the authenticated user.</div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method DELETE">DELETE</span>/prismrag/tenants/{tenant_id}</div>
+        <div class="endpoint-desc">Permanently delete a workspace and all its data.</div>
+      </div>
+    </section>
+
+    <!-- ── Mappings ── -->
+    <section id="mappings">
+      <h2>Mappings</h2>
+      <p>A mapping defines your knowledge graph structure — which categories exist and which words belong to each. PrismRAG uses mappings to project ingested content into your semantic model.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/prismrag/mappings</div>
+        <div class="endpoint-desc">Create or update the mapping version for a workspace. Pass <code>strategy: "rules"</code> for deterministic projection or <code>"mlp"</code> to train a personal neural model.</div>
+      </div>
+      <pre><code>{
+  <span class="c-key">"tenant_id"</span>: <span class="c-str">"wsp_01abc..."</span>,
+  <span class="c-key">"strategy"</span>:  <span class="c-str">"rules"</span>,          <span class="c-cmt">// "rules" | "mlp"</span>
+  <span class="c-key">"categories"</span>: [
+    {
+      <span class="c-key">"category_slug"</span>: <span class="c-str">"risk"</span>,
+      <span class="c-key">"label"</span>: <span class="c-str">"Risk &amp; Compliance"</span>,
+      <span class="c-key">"words"</span>: [
+        { <span class="c-key">"word"</span>: <span class="c-str">"volatility"</span>, <span class="c-key">"weight"</span>: <span class="c-num">1.0</span> },
+        { <span class="c-key">"word"</span>: <span class="c-str">"exposure"</span>,   <span class="c-key">"weight"</span>: <span class="c-num">0.8</span> }
+      ]
+    }
+  ]
+}</code></pre>
+
+      <div class="tip">
+        <span>💡</span>
+        <div><strong>You don't need to list every word.</strong> Tier-1 rules cover exact matches. Tier-2 (MLP) generalises to vocabulary not in your list — train it after you've defined at least 10 words per category.</div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/prismrag/mappings?tenant_id={id}</div>
+        <div class="endpoint-desc">Retrieve the current mapping version for a workspace.</div>
+      </div>
+    </section>
+
+    <!-- ── Ingest ── -->
+    <section id="ingest">
+      <h2>Ingest jobs</h2>
+      <p>Ingest jobs embed, map, and index your content. Jobs are asynchronous — submit the job, then poll until <code>status: "completed"</code>.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/prismrag/jobs</div>
+        <div class="endpoint-desc">Submit an ingest job. Supports inline records, Azure Blob URLs, or file uploads.</div>
+      </div>
+      <pre><code><span class="c-cmt"># Inline records</span>
+{
+  <span class="c-key">"tenant_id"</span>:   <span class="c-str">"wsp_01abc..."</span>,
+  <span class="c-key">"strategy"</span>:    <span class="c-str">"rules"</span>,
+  <span class="c-key">"source_type"</span>: <span class="c-str">"inline"</span>,
+  <span class="c-key">"records"</span>: [
+    { <span class="c-key">"id"</span>: <span class="c-str">"doc-1"</span>, <span class="c-key">"text"</span>: <span class="c-str">"Volatility in Q3 was driven by..."</span> }
+  ]
+}
+
+<span class="c-cmt"># Azure Blob (large files)</span>
+{
+  <span class="c-key">"tenant_id"</span>:   <span class="c-str">"wsp_01abc..."</span>,
+  <span class="c-key">"strategy"</span>:    <span class="c-str">"mlp"</span>,
+  <span class="c-key">"source_type"</span>: <span class="c-str">"blob"</span>,
+  <span class="c-key">"blob_url"</span>:    <span class="c-str">"https://storage.azure.com/..."</span>
+}</code></pre>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/prismrag/jobs/{job_id}</div>
+        <div class="endpoint-desc">Poll job status. Returns <code>status</code>, <code>progress_pct</code>, and <code>records_written</code> when complete.</div>
+      </div>
+      <pre><code><span class="c-cmt"># Response (in progress)</span>
+{ <span class="c-key">"status"</span>: <span class="c-str">"running"</span>, <span class="c-key">"progress_pct"</span>: <span class="c-num">60</span> }
+
+<span class="c-cmt"># Response (complete)</span>
+{ <span class="c-key">"status"</span>: <span class="c-str">"completed"</span>, <span class="c-key">"records_written"</span>: <span class="c-num">142</span>, <span class="c-key">"duration_s"</span>: <span class="c-num">14.2</span> }</code></pre>
+    </section>
+
+    <!-- ── Search ── -->
+    <section id="search">
+      <h2>Search</h2>
+      <p>Semantic search over your indexed content. Queries are routed through your community graph and re-ranked by your personal model when available.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/prismrag/search</div>
+        <div class="endpoint-desc">Run a semantic search query against a workspace.</div>
+      </div>
+      <pre><code>{
+  <span class="c-key">"query"</span>:     <span class="c-str">"What are the main risk factors in Q3?"</span>,
+  <span class="c-key">"tenant_id"</span>: <span class="c-str">"wsp_01abc..."</span>,
+  <span class="c-key">"top_k"</span>:     <span class="c-num">10</span>,
+  <span class="c-key">"strategy"</span>:  <span class="c-str">"rules"</span>           <span class="c-cmt">// optional — defaults to workspace strategy</span>
+}
+
+<span class="c-cmt"># Response</span>
+{
+  <span class="c-key">"results"</span>: [
+    {
+      <span class="c-key">"chunk_id"</span>:   <span class="c-str">"chk_..."</span>,
+      <span class="c-key">"text"</span>:       <span class="c-str">"Volatility in Q3 was driven by..."</span>,
+      <span class="c-key">"score"</span>:      <span class="c-num">0.94</span>,
+      <span class="c-key">"categories"</span>: [<span class="c-str">"risk"</span>]
+    }
+  ],
+  <span class="c-key">"latency_ms"</span>: <span class="c-num">38</span>
+}</code></pre>
+    </section>
+
+    <!-- ── Communities ── -->
+    <section id="communities">
+      <h2>Communities</h2>
+      <p>Communities are automatically detected semantic clusters in your knowledge graph. Each has a name, a set of member words, and a centroid vector used for query routing.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/prismrag/communities?tenant_id={id}</div>
+        <div class="endpoint-desc">List all communities detected in a workspace after the last ingest job.</div>
+      </div>
+      <pre><code>[
+  {
+    <span class="c-key">"community_id"</span>: <span class="c-str">"com_..."</span>,
+    <span class="c-key">"label"</span>:        <span class="c-str">"Risk &amp; Compliance"</span>,
+    <span class="c-key">"word_count"</span>:   <span class="c-num">48</span>,
+    <span class="c-key">"chunk_count"</span>:  <span class="c-num">312</span>
+  }
+]</code></pre>
+    </section>
+
+    <!-- ── Bridges ── -->
+    <section id="bridges">
+      <h2>Bridge vectors</h2>
+      <p>Bridge vectors create traversable links between two knowledge communities — enabling cross-domain retrieval without retraining.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/prismrag/bridges</div>
+        <div class="endpoint-desc">Create a semantic bridge between two communities.</div>
+      </div>
+      <pre><code>{
+  <span class="c-key">"tenant_id"</span>:      <span class="c-str">"wsp_01abc..."</span>,
+  <span class="c-key">"community_id_a"</span>: <span class="c-str">"com_risk_..."</span>,
+  <span class="c-key">"community_id_b"</span>: <span class="c-str">"com_legal_..."</span>,
+  <span class="c-key">"label"</span>:          <span class="c-str">"Risk-Legal overlap"</span>   <span class="c-cmt">// optional</span>
+}</code></pre>
+    </section>
+
+    <!-- ── Deliberation ── -->
+    <section id="delib-create">
+      <h2>Deliberation — Create session</h2>
+      <p>A Deliberation session represents one complex question run through the multi-domain expert pipeline. Sessions are async — create, run, then poll.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/deliberation/sessions</div>
+        <div class="endpoint-desc">Create a new deliberation session.</div>
+      </div>
+      <pre><code>{
+  <span class="c-key">"query"</span>:     <span class="c-str">"Should we proceed with the acquisition given current market conditions?"</span>,
+  <span class="c-key">"tenant_id"</span>: <span class="c-str">"wsp_01abc..."</span>    <span class="c-cmt">// optional — grounds domains in your KB</span>
+}
+
+<span class="c-cmt"># Response</span>
+{ <span class="c-key">"session_id"</span>: <span class="c-str">"dlb_..."</span>, <span class="c-key">"status"</span>: <span class="c-str">"created"</span> }</code></pre>
+    </section>
+
+    <section id="delib-run">
+      <h2>Deliberation — Run pipeline</h2>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/deliberation/sessions/{id}/run</div>
+        <div class="endpoint-desc">Start the three-phase deliberation pipeline. Returns immediately; poll for results.</div>
+      </div>
+
+      <div class="tip">
+        <span>⏱</span>
+        <div><strong>Typical latency:</strong> 15–45 seconds end-to-end depending on domain complexity. Poll every 3–5 seconds.</div>
+      </div>
+    </section>
+
+    <section id="delib-poll">
+      <h2>Deliberation — Poll &amp; retrieve</h2>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/deliberation/sessions/{id}</div>
+        <div class="endpoint-desc">Get session status and results. When <code>status: "completed"</code> the full synthesis, domain summaries, agreements, and conflicts are included.</div>
+      </div>
+      <pre><code>{
+  <span class="c-key">"status"</span>: <span class="c-str">"completed"</span>,
+  <span class="c-key">"domains_discovered"</span>: [<span class="c-str">"Finance"</span>, <span class="c-str">"Antitrust"</span>, <span class="c-str">"HR"</span>, <span class="c-str">"Operations"</span>],
+  <span class="c-key">"domain_summaries"</span>: { <span class="c-str">"Finance"</span>: <span class="c-str">"DCF supports valuation at..."</span> },
+  <span class="c-key">"agreements"</span>: [<span class="c-str">"All domains agree integration timeline is 18 months"</span>],
+  <span class="c-key">"conflicts"</span>:  [<span class="c-str">"Finance: proceed · Antitrust: 40% block probability"</span>],
+  <span class="c-key">"synthesis"</span>:  <span class="c-str">"Based on independent expert analysis..."</span>
+}</code></pre>
+    </section>
+
+    <section id="delib-followup">
+      <h2>Deliberation — Follow-up</h2>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/deliberation/sessions/{id}/followup</div>
+        <div class="endpoint-desc">Ask a follow-up question on a completed session. Does not consume your monthly deliberation quota.</div>
+      </div>
+      <pre><code>{ <span class="c-key">"question"</span>: <span class="c-str">"What specifically did the Antitrust domain flag?"</span> }</code></pre>
+    </section>
+
+    <!-- ── Account ── -->
+    <section id="account-me">
+      <h2>Profile</h2>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/auth/me</div>
+        <div class="endpoint-desc">Get the authenticated user's profile, plan, and tenant ID.</div>
+      </div>
+    </section>
+
+    <section id="account-usage">
+      <h2>Usage</h2>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/dashboard/usage</div>
+        <div class="endpoint-desc">Current period usage against plan limits — searches, deliberations, chunks, and overage.</div>
+      </div>
+      <pre><code>{
+  <span class="c-key">"usage"</span>:     { <span class="c-key">"searches"</span>: <span class="c-num">1240</span>, <span class="c-key">"deliberations"</span>: <span class="c-num">18</span> },
+  <span class="c-key">"limits"</span>:    { <span class="c-key">"searches"</span>: <span class="c-num">50000</span>, <span class="c-key">"deliberations"</span>: <span class="c-num">500</span> },
+  <span class="c-key">"remaining"</span>: { <span class="c-key">"searches"</span>: <span class="c-num">48760</span>, <span class="c-key">"deliberations"</span>: <span class="c-num">482</span> }
+}</code></pre>
+    </section>
+
+    <section id="billing">
+      <h2>Billing</h2>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method GET">GET</span>/billing/plans</div>
+        <div class="endpoint-desc">List available plans with pricing and limits.</div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/billing/checkout</div>
+        <div class="endpoint-desc">Create a Stripe Checkout session to upgrade the authenticated user's plan.</div>
+      </div>
+      <div class="endpoint">
+        <div class="endpoint-title"><span class="method POST">POST</span>/billing/portal</div>
+        <div class="endpoint-desc">Open a Stripe Customer Portal session for managing subscriptions and invoices.</div>
+      </div>
+    </section>
+
+    <div style="margin-top:64px;padding-top:32px;border-top:1px solid var(--border);font-size:.8rem;color:var(--text-muted)">
+      Need help? <a href="mailto:support@prismrag.io">support@prismrag.io</a> · <a href="/docs" target="_blank">Full OpenAPI spec</a> · <a href="/mcp.html">MCP integration</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// Highlight active sidebar link on scroll
+const sections = document.querySelectorAll('section[id]');
+const links = document.querySelectorAll('.sidebar a[href^="#"]');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.sidebar a[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

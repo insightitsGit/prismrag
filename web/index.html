@@ -56,7 +56,7 @@
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Cloud / API",
     "url": "https://prismrag.io",
-    "description": "Enterprise semantic re-mapping engine. Replaces Graph RAG statistical relationship derivation with client-defined mapping strategies. Uses PyTorch MLP (Tier-2), Louvain community detection, pgvector HNSW indexes, and Gemini text-embedding-004 embeddings.",
+    "description": "Enterprise semantic re-mapping engine. Replaces Graph RAG statistical relationship derivation with client-defined mapping strategies. Tier-1 deterministic rules and Tier-2 personal neural projections give every client a fully isolated knowledge graph from the same source documents.",
     "offers": [
       { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "5,000 chunks/month" },
       { "@type": "Offer", "name": "Starter", "price": "49", "priceCurrency": "USD", "billingIncrement": "month" },
@@ -65,16 +65,16 @@
     ],
     "featureList": [
       "Client-defined knowledge graph mapping",
-      "Tier-1 Rules Strategy (deterministic, auditable)",
-      "Tier-2 PyTorch MLP training (InfoNCE loss + anchor repulsion)",
-      "Gemini text-embedding-004 semantic embeddings (768-d)",
-      "Louvain community detection on word graphs",
-      "pgvector HNSW indexes for millisecond vector search",
+      "Tier-1 deterministic rules strategy — fully auditable",
+      "Tier-2 personal neural projection trained on your word rules",
+      "State-of-the-art semantic embeddings with DB caching",
+      "Automatic graph community detection and labelling",
+      "Millisecond vector search across millions of chunks",
       "Bridge vectors for cross-community semantic links",
-      "Graph RAG retrieval: community centroid → BFS → MLP re-rank",
-      "Azure Blob large file ingestion (streaming CSV)",
+      "Graph RAG retrieval: community routing → semantic re-ranking",
+      "Azure Blob large file ingestion (streaming)",
       "MCP server for AI agent integration",
-      "Three-layer metering: Redis rate limit + monthly quota + Postgres audit"
+      "Enterprise-grade metering: rate limiting, monthly quota, audit log"
     ]
   }
   </script>
@@ -88,7 +88,7 @@
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Cloud / API",
     "url": "https://prismrag.io/#deliberation",
-    "description": "Three-phase AI deliberation pipeline: Horizontal domain discovery (LLM + knowledge base) → Parallel vertical expert queries per domain → Master Deliberator synthesis with agreement/conflict detection. Backed by scientific evidence from Mixture of Agents research (Together AI, 2024) and AI Safety via Debate (Irving et al., 2018).",
+    "description": "Multi-domain AI deliberation platform. Ask one complex question and receive synthesised answers from independent domain expert agents, with explicit agreement and conflict detection. Grounded in your knowledge base via PrismRAG when connected.",
     "offers": [
       { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "5 deliberations/month" },
       { "@type": "Offer", "name": "Starter", "price": "29", "priceCurrency": "USD", "billingIncrement": "month", "description": "50 deliberations/month" },
@@ -124,10 +124,10 @@
       },
       {
         "@type": "Question",
-        "name": "What ML algorithms does PrismRAG use?",
+        "name": "What ML technology does PrismRAG use?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "PrismRAG uses four core ML components: (1) Gemini text-embedding-004 for 768-dimensional semantic embeddings; (2) Tier-1 RulesStrategy: deterministic 768→256-d linear projection with 30% category one-hot signal + 70% random orthonormal projection, L2-normalised; (3) Tier-2 MLPStrategy: a 3-layer PyTorch MLP (768→512→512→256) trained with InfoNCE contrastive loss plus anchor repulsion, using AdamW + CosineAnnealingLR; (4) Louvain community detection on the word graph, with parallel Gemini LLM labeling of each community."
+          "text": "PrismRAG combines state-of-the-art semantic embeddings with a proprietary two-tier projection system. Tier-1 (Rules) is a fully deterministic linear projection that blends your category signal into the embedding space — giving complete audit traceability from mapping rule to retrieval result. Tier-2 (Personal Neural) trains a deep neural network on your word rules using contrastive learning so the model generalises your categories to vocabulary not in your rule set. An automated graph community detection step groups words into semantic clusters, each labelled by an LLM in parallel. All retrieval is powered by high-performance approximate nearest-neighbour indexes."
         }
       },
       {
@@ -235,7 +235,9 @@
       <li><a href="#ml-engine">AI / ML</a></li>
       <li><a href="#deliberation">Deliberation</a></li>
       <li><a href="#pricing">Pricing</a></li>
-      <li><a href="/docs" target="_blank">Docs</a></li>
+      <li><a href="/api-docs.html">API</a></li>
+      <li><a href="/mcp.html">MCP</a></li>
+      <li><a href="/playground.html">Playground</a></li>
     </ul>
     <div class="nav-cta">
       <a href="/login.html" class="btn-ghost">Sign in</a>
@@ -250,7 +252,9 @@
     <a href="#how-it-works">How it works</a>
     <a href="#deliberation">Deliberation</a>
     <a href="#pricing">Pricing</a>
-    <a href="/docs" target="_blank">API Docs</a>
+    <a href="/api-docs.html">API Docs</a>
+    <a href="/mcp.html">MCP</a>
+    <a href="/playground.html">Playground</a>
     <div class="nav-mobile-cta">
       <a href="/login.html" class="btn-ghost">Sign in</a>
       <a href="/register.html" class="btn-primary">Start free</a>
@@ -487,101 +491,96 @@
 <!-- ── ML ENGINE ─────────────────────────────────────────────────────────── -->
 <section class="ml-section" id="ml-engine">
   <div class="container">
-    <div class="section-label">Under the Hood</div>
+    <div class="section-label">AI / ML Engine</div>
     <h2 class="section-h2">Enterprise ML, not a prompt wrapper</h2>
-    <p class="section-sub">Every API call is backed by a multi-layer machine learning stack. Here's exactly what runs and when.</p>
+    <p class="section-sub">Every API call is backed by a proprietary multi-layer machine learning stack — purpose-built for domain-controlled knowledge retrieval.</p>
 
     <div class="ml-grid">
       <div class="ml-card">
         <div class="ml-card-api">All ingestion APIs</div>
-        <h4>Gemini text-embedding-004</h4>
-        <p>Every word and chunk is embedded into 768-dimensional semantic space using Google's Gemini embedding model, with DB caching so repeated words don't re-call the API.</p>
+        <h4>State-of-the-Art Semantic Embeddings</h4>
+        <p>Every word and chunk is embedded into high-dimensional semantic space using a best-in-class foundation embedding model, with database caching so repeated vocabulary never makes a redundant API call. Batch ingestion pipelines handle millions of records efficiently.</p>
         <div>
-          <span class="ml-pill">768-d vectors</span>
+          <span class="ml-pill">High-dim vectors</span>
           <span class="ml-pill">DB cache</span>
-          <span class="ml-pill">Batch calls</span>
+          <span class="ml-pill">Batch ingestion</span>
         </div>
       </div>
 
       <div class="ml-card">
         <div class="ml-card-api">strategy: "rules" (Tier 1)</div>
-        <h4>Linear Projection + Category Signal</h4>
-        <p>768-d Gemini vectors are projected to 256-d via a seeded random orthonormal matrix (preserves cosine distances). A 30% category one-hot signal is blended in to pull same-category words together before MLP training. L2-normalised to unit sphere. Fully deterministic and auditable.</p>
+        <h4>Deterministic Category Projection</h4>
+        <p>Your category signal is blended into the embedding space via a proprietary projection that preserves semantic distances while pulling same-category words together. The result is fully deterministic: the same mapping always produces the same embedding — making every retrieval decision auditable and reproducible.</p>
         <div>
-          <span class="ml-pill">768→256-d</span>
-          <span class="ml-pill">30/70 blend</span>
-          <span class="ml-pill">L2 normalise</span>
-          <span class="ml-pill">QR orthonormal</span>
+          <span class="ml-pill">Deterministic</span>
+          <span class="ml-pill">Category-aware</span>
+          <span class="ml-pill">Fully auditable</span>
         </div>
       </div>
 
       <div class="ml-card">
         <div class="ml-card-api">strategy: "mlp" (Tier 2)</div>
-        <h4>Personal PyTorch MLP</h4>
-        <p>A 3-layer MLP (768→512→512→256) is trained on your word rules using InfoNCE contrastive loss (τ=0.20) plus anchor repulsion (weight=0.35). This learns the decision boundaries between your categories and generalises them to vocabulary not in your rule set. AdamW optimiser, CosineAnnealingLR schedule, gradient clipping at 1.0.</p>
+        <h4>Personal Neural Projection</h4>
+        <p>A deep neural network is trained specifically on your word rules using contrastive learning objectives. It learns the decision boundaries between your categories and generalises them to vocabulary not in your rule set — so new documents land in the right community without you having to add every word manually.</p>
         <div>
-          <span class="ml-pill">PyTorch</span>
-          <span class="ml-pill">InfoNCE loss</span>
-          <span class="ml-pill">Anchor repulsion</span>
-          <span class="ml-pill">AdamW</span>
-          <span class="ml-pill">Cosine LR</span>
+          <span class="ml-pill">Contrastive learning</span>
+          <span class="ml-pill">Category generalisation</span>
+          <span class="ml-pill">Per-client model</span>
         </div>
       </div>
 
       <div class="ml-card">
         <div class="ml-card-api">After every ingestion job</div>
-        <h4>Louvain Community Detection</h4>
-        <p>A word co-occurrence graph is built from ingested chunks, then Louvain modularity optimisation groups words into communities. Each community centroid is computed, stored as a pgvector VECTOR(256), and labelled in parallel using Gemini LLM calls.</p>
+        <h4>Automatic Graph Community Detection</h4>
+        <p>A semantic word graph is built from your ingested content and a proprietary community detection algorithm groups words into meaningful clusters. Each community is labelled automatically using LLM calls running in parallel — giving every tenant a named, queryable knowledge graph without manual taxonomy work.</p>
         <div>
-          <span class="ml-pill">python-louvain</span>
-          <span class="ml-pill">NetworkX</span>
-          <span class="ml-pill">Parallel LLM labelling</span>
+          <span class="ml-pill">Graph clustering</span>
+          <span class="ml-pill">Auto-labelling</span>
+          <span class="ml-pill">Parallel LLM</span>
         </div>
       </div>
 
       <div class="ml-card">
         <div class="ml-card-api">POST /api/prismrag/search</div>
-        <h4>Graph RAG Retrieval Pipeline</h4>
-        <p>Three-phase retrieval: (1) HNSW cosine search on community centroids to find the closest community to the query. (2) BFS 2-hop expansion on the word graph to find related words. (3) MLP re-ranking: if a Tier-2 model exists, all candidates are re-projected through the personal MLP before final cosine ranking.</p>
+        <h4>Multi-Stage Graph RAG Retrieval</h4>
+        <p>Queries are routed through your community graph — not a statistical one — then re-ranked through your personal neural model when available. Community routing narrows the search space before exact vector similarity scoring, delivering millisecond latency even across very large corpora.</p>
         <div>
-          <span class="ml-pill">HNSW m=16</span>
-          <span class="ml-pill">BFS 2-hop</span>
-          <span class="ml-pill">MLP re-rank</span>
-          <span class="ml-pill">pgvector</span>
+          <span class="ml-pill">Community routing</span>
+          <span class="ml-pill">Neural re-ranking</span>
+          <span class="ml-pill">Sub-50ms latency</span>
         </div>
       </div>
 
       <div class="ml-card">
         <div class="ml-card-api">POST /api/prismrag/bridges</div>
-        <h4>Bridge Vector Synthesis</h4>
-        <p>Cross-community semantic bridges are created by computing the normalised midpoint between two community centroids: normalize((centroid_A + centroid_B) / 2). The bridge vector is then projected through the personal MLP (if Tier 2), creating a synthetic node that connects two previously separate semantic clusters without retraining.</p>
+        <h4>Cross-Community Bridge Vectors</h4>
+        <p>Semantic bridges connect two previously separate knowledge communities without any retraining. A synthetic bridge node is computed from the community centroids and projected through the personal neural model, creating a traversable link between clusters that captures inter-domain concepts your mapping didn't explicitly define.</p>
         <div>
-          <span class="ml-pill">Centroid midpoint</span>
-          <span class="ml-pill">MLP projection</span>
-          <span class="ml-pill">No retraining</span>
+          <span class="ml-pill">Cross-community links</span>
+          <span class="ml-pill">Zero retraining</span>
+          <span class="ml-pill">On-demand</span>
         </div>
       </div>
 
       <div class="ml-card">
         <div class="ml-card-api">POST /api/deliberation/sessions</div>
-        <h4>Multi-Agent Deliberation (LLM ensemble)</h4>
-        <p>The Deliberation pipeline runs a structured ensemble of Gemini LLM calls: one horizontal domain discovery call, up to 10 parallel vertical expert calls (each with domain-specific prompt engineering), and one Master Deliberator synthesis call. Based on the Mixture of Agents (MoA) technique — diverse independent reasoning outperforms a single call on complex questions.</p>
+        <h4>Multi-Agent Deliberation Engine</h4>
+        <p>A proprietary orchestration layer runs independent domain expert agents in parallel, each reasoning from their domain perspective without knowledge of what other agents are returning. A final synthesis stage surfaces genuine disagreements — not hedged consensus — because the conflict is real, not simulated by a single model.</p>
         <div>
-          <span class="ml-pill">LLM ensemble</span>
-          <span class="ml-pill">Parallel inference</span>
+          <span class="ml-pill">Parallel agents</span>
+          <span class="ml-pill">Independent reasoning</span>
           <span class="ml-pill">Conflict detection</span>
-          <span class="ml-pill">MoA technique</span>
         </div>
       </div>
 
       <div class="ml-card">
         <div class="ml-card-api">Every API endpoint</div>
-        <h4>Three-Layer Metering</h4>
-        <p>Usage is enforced and tracked at three levels: Redis sliding window for per-minute rate limiting (&lt;1ms), Redis monthly counter for quota tracking (Postgres fallback), and async Postgres writes for usage_event audit log. Zero DB latency added to the request path.</p>
+        <h4>Enterprise-Grade Metering</h4>
+        <p>Usage is enforced at multiple layers: sub-millisecond rate limiting protects against burst abuse, monthly quota counters enforce plan limits with automatic overage detection, and every API call is asynchronously logged to a tamper-evident audit trail — with zero latency added to the request path.</p>
         <div>
-          <span class="ml-pill">Redis sliding window</span>
+          <span class="ml-pill">Rate limiting</span>
           <span class="ml-pill">Monthly quota</span>
-          <span class="ml-pill">Async audit log</span>
+          <span class="ml-pill">Audit trail</span>
         </div>
       </div>
     </div>
@@ -607,7 +606,7 @@
       <div class="pipeline-phase">
         <div class="phase-num">Phase 1</div>
         <div class="phase-name">Horizontal Discovery</div>
-        <div class="phase-detail">LLM + your knowledge base community search surfaces the top 7 most relevant domains for the question. Domains from both sources get a 15% score boost (source="hybrid").</div>
+        <div class="phase-detail">LLM reasoning and your knowledge base community search work together to surface the most relevant domains for the question. Domains confirmed by both sources rank higher, ensuring your organisation's context shapes which experts are consulted.</div>
         <span class="phase-tag">~2–5 seconds</span>
       </div>
       <div class="pipeline-arrow">→</div>
