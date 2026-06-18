@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prismrag-patch"
-version = "0.1.1"
+version = "0.1.2"
 description = "Drop-in hallucination-resistant retrieval for pgvector, ChromaDB, Pinecone, and Weaviate"
 readme = "README.md"
 license = { text = "Commercial" }

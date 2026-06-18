@@ -6,46 +6,55 @@ PrismRAG Patch wraps pgvector, ChromaDB, Pinecone, or Weaviate with PrismRAG's
 Tier-1 re-mapping technique — deterministic category projection that grounds every
 chunk in your verified taxonomy before it ever reaches the LLM.
 
+Works with **any embedding model** — Gemini, OpenAI, Cohere, HuggingFace, or your
+own local model. No lock-in.
+
 ## Requirements
 
 | Requirement | Detail |
 |-------------|--------|
 | Python | 3.10+ |
 | License key | `prlib_` key from [prismrag.insightits.com](https://prismrag.insightits.com/prismrag-lib.html) |
-| Embedding model | **Gemini `gemini-embedding-001`** (recommended) or any model producing float vectors |
-| Gemini API key | Required if using Gemini embeddings — get one at [aistudio.google.com](https://aistudio.google.com) |
+| Embedding model | Any model that returns a list of floats — you provide the vector |
 
-> **Important:** prismrag-patch does **not** generate embeddings for you.
-> You call your embedding model, then pass the resulting vector to the adapter.
-> The library remaps, enriches, and stores/searches the vector in your database.
+> **prismrag-patch does not generate embeddings.** You call your embedding model
+> of choice, then pass the resulting vector to the adapter. The library remaps,
+> enriches, and stores/searches it in your database.
 
-## Quick start — pgvector + Gemini
+## Quick start
 
 ```python
-import os
-import requests
-import psycopg2
 from prismrag_patch import PrismRAGPatch
 from prismrag_patch.adapters.pgvector import PgvectorAdapter
+import psycopg2
 
-# ── 1. Embedding function using Gemini (768-dim, same as production) ─────────
-GEMINI_KEY = os.environ["GEMINI_API_KEY"]   # set in your environment
+# ── 1. Your embedding function — use any model ────────────────────────────────
 
-def embed(text: str) -> list[float]:
-    """Call Gemini embedding API and return a 768-dim vector."""
+# Option A: OpenAI
+from openai import OpenAI
+def embed(text):
+    return OpenAI().embeddings.create(
+        input=text, model="text-embedding-3-small"
+    ).data[0].embedding   # 1536-dim
+
+# Option B: Gemini
+import os, requests
+def embed(text):
     resp = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-embedding-001:batchEmbedContents?key={GEMINI_KEY}",
-        json={"requests": [{
-            "model": "models/gemini-embedding-001",
-            "content": {"parts": [{"text": text}]},
-            "outputDimensionality": 768,
-            "taskType": "RETRIEVAL_DOCUMENT",
-        }]},
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-embedding-001:batchEmbedContents?key={os.environ['GEMINI_API_KEY']}",
+        json={"requests": [{"model": "models/gemini-embedding-001",
+                             "content": {"parts": [{"text": text}]},
+                             "outputDimensionality": 768}]},
         timeout=30,
     )
-    resp.raise_for_status()
-    return resp.json()["embeddings"][0]["values"]
+    return resp.json()["embeddings"][0]["values"]   # 768-dim
+
+# Option C: HuggingFace (local, no API key)
+from sentence_transformers import SentenceTransformer
+_model = SentenceTransformer("all-MiniLM-L6-v2")
+def embed(text):
+    return _model.encode(text).tolist()   # 384-dim
 
 
 # ── 2. Define your category mapping ──────────────────────────────────────────
@@ -62,22 +71,20 @@ mapping = {
     ],
 }
 
-# ── 3. Initialize prismrag-patch ──────────────────────────────────────────────
-patch = PrismRAGPatch(license_key="prlib_YOUR_KEY_HERE", mapping=mapping)
-
-# ── 4. Connect to your database ───────────────────────────────────────────────
+# ── 3. Initialize and connect ─────────────────────────────────────────────────
+patch   = PrismRAGPatch(license_key="prlib_YOUR_KEY_HERE", mapping=mapping)
 conn    = psycopg2.connect("postgresql://user:pass@localhost:5432/mydb")
 adapter = PgvectorAdapter(patch, conn, table="my_chunks")
-adapter.ensure_table(dim=768)   # creates table + HNSW index if not exists
+adapter.ensure_table(dim=768)   # match your model's output dimension
 
-# ── 5. Embed your document with Gemini, then insert ──────────────────────────
-doc  = "Market volatility spiked due to fraud risk exposure."
-vec  = embed(doc)                          # real 768-dim Gemini vector
+# ── 4. Embed with your model, insert with prismrag-patch ─────────────────────
+doc    = "Market volatility spiked due to fraud risk exposure."
+vec    = embed(doc)                        # your model produces the vector
 row_id = adapter.insert(doc, vec, metadata={"source": "risk_report"})
 # stored vector is remapped toward "risk" category cluster
 # metadata gets prismrag_category + prismrag_label injected automatically
 
-# ── 6. Search ─────────────────────────────────────────────────────────────────
+# ── 5. Search ─────────────────────────────────────────────────────────────────
 query     = "what is our risk exposure?"
 query_vec = embed(query)
 results   = adapter.search(query, query_vec, top_k=5)
@@ -126,7 +133,7 @@ adapter.insert(doc, embed(doc), metadata={"source": "report"})
 from pinecone import Pinecone
 from prismrag_patch.adapters.pinecone import PineconeAdapter
 
-pc      = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
+pc      = Pinecone(api_key="YOUR_PINECONE_KEY")
 index   = pc.Index("my-index")
 adapter = PineconeAdapter(patch, index, namespace="finance")
 adapter.insert(doc, embed(doc), metadata={"source": "report"})
@@ -150,7 +157,7 @@ adapter.insert(doc, embed(doc))
 Your text
     │
     ▼
-Your embedding model (Gemini / OpenAI / Cohere)   ← you call this
+Any embedding model (OpenAI / Gemini / HuggingFace / Cohere / your own)
     │
     ▼
 raw vector  [0.12, -0.45, 0.88, ...]   N dimensions
@@ -168,14 +175,19 @@ stored in YOUR database — prismrag-patch never holds your data
 
 ## What prismrag-patch does NOT do
 
-- It does **not** call an LLM
-- It does **not** generate embeddings
-- It does **not** store your data on PrismRAG servers
-- The only network call is a one-time license validation (cached 23 hours, 7-day offline grace period)
+- Generate embeddings — you bring your own model
+- Call an LLM
+- Store your data on PrismRAG servers
+- Lock you into any embedding provider
+
+The only network call is a one-time license validation (cached 23 hours,
+7-day offline grace period).
 
 ## License
 
 Commercial license required. Get yours at
 [prismrag.insightits.com/prismrag-lib.html](https://prismrag.insightits.com/prismrag-lib.html).
+
+Questions? [prismrag@insightits.com](mailto:prismrag@insightits.com)
 
 © 2026 Insight IT Solutions
