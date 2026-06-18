@@ -1098,12 +1098,54 @@ async function registerMappings(tenantId, mappings) {
 }
 
 async function submitIngestJob(tenantId, records) {
+  const hasMappings = SESSION.mappings.length > 0;
+
+  // Build inline records: each needs a `word` (key term) + `text` (context).
+  // For free-text paragraphs we expand by mapping keywords found in the text,
+  // falling back to using a truncated excerpt as the word if no keywords match.
+  let inlineRecords = [];
+  if (hasMappings) {
+    records.forEach(r => {
+      const lower = r.text.toLowerCase();
+      const matched = SESSION.mappings.filter(m => lower.includes(m.keyword.toLowerCase()));
+      if (matched.length > 0) {
+        matched.forEach(m => inlineRecords.push({ word: m.keyword, text: r.text }));
+      } else {
+        // No keyword match — index with a truncated text key so nothing is lost
+        inlineRecords.push({ word: r.text.slice(0, 60).trim().replace(/\s+/g, '_'), text: r.text });
+      }
+    });
+  } else {
+    // No mappings — use first 60 chars as word key (semantic strategy)
+    inlineRecords = records.map(r => ({
+      word: r.text.slice(0, 60).trim().replace(/\s+/g, '_'),
+      text: r.text,
+    }));
+  }
+
+  // Deduplicate by word (keep first occurrence)
+  const seen = new Set();
+  inlineRecords = inlineRecords.filter(r => {
+    if (seen.has(r.word)) return false;
+    seen.add(r.word);
+    return true;
+  });
+
   const body = {
     tenant_id: tenantId,
-    strategy: SESSION.mappings.length > 0 ? 'rules' : 'semantic',
+    strategy:  hasMappings ? 'rules' : 'rules',
     source_type: 'inline',
-    records: records.map(r => ({ id: r.id, text: r.text, metadata: r.meta })),
+    inline_config: { records: inlineRecords },
   };
+
+  if (hasMappings) {
+    const slugSet = new Set(SESSION.mappings.map(m => m.category));
+    body.mapping = {
+      categories: Array.from(slugSet).map(s => ({ slug: s, label: s.charAt(0).toUpperCase() + s.slice(1) })),
+      rules: SESSION.mappings.map(m => ({ word: m.keyword, category_slug: m.category })),
+    };
+  }
+
   const res = await authFetch('/api/v1/prismrag/jobs', { method: 'POST', body: JSON.stringify(body) });
   if (!res.ok) throw new Error('Ingest failed: ' + await res.text());
   const d = await res.json();
@@ -1132,10 +1174,10 @@ async function pollJob(jobId) {
 }
 
 async function fetchChunks(tenantId) {
-  const res = await authFetch(`/api/v1/prismrag/chunks?tenant_id=${encodeURIComponent(tenantId)}&limit=20`);
+  const res = await authFetch(`/api/v1/prismrag/tenants/${encodeURIComponent(tenantId)}/chunks?limit=20`);
   if (!res.ok) return [];
   const d = await res.json();
-  return Array.isArray(d) ? d : (d.chunks || []);
+  return Array.isArray(d) ? d : (d.chunks || d.items || []);
 }
 
 /* ── Chat ────────────────────────────────────────────────────────────────── */
@@ -1178,10 +1220,10 @@ async function sendChat() {
     // 1. Search PrismRAG
     const results = await searchPrismRAG(query);
     const sources = results.map(r => ({
-      id: r.chunk_id || r.id,
-      text: r.text || r.content,
-      score: r.score,
-      categories: r.categories || [],
+      id:         r.word || r.chunk_ref || r.id || '',
+      text:       r.text || r.chunk_text || r.content || '',
+      score:      r.score || 0,
+      categories: r.category ? [r.category] : (r.categories || []),
     }));
 
     // 2. Build context and call Gemini via server-side proxy
@@ -1208,12 +1250,42 @@ async function searchPrismRAG(query) {
       query,
       tenant_id: SESSION.tenantId,
       top_k: TOP_K,
-      strategy: SESSION.mappings.length > 0 ? 'rules' : 'semantic',
     }),
   });
   if (!res.ok) throw new Error('Search failed (' + res.status + ')');
   const d = await res.json();
-  return d.results || d || [];
+
+  // Search may be async — poll the task until results are ready
+  if (d.async_mode && d.task_id) {
+    const taskUrl = d.status_url || `/api/v1/prismrag/search/tasks/${d.task_id}`;
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      const tr = await authFetch(taskUrl);
+      if (!tr.ok) break;
+      const td = await tr.json();
+      if (td.status === 'completed' || td.status === 'done') {
+        // Result is nested: td.result.hits
+        return _normaliseHits(td.result);
+      }
+      if (td.status === 'failed') throw new Error('Search task failed');
+    }
+    throw new Error('Search timed out');
+  }
+
+  return _normaliseHits(d);
+}
+
+// Normalise search response to a consistent [{text, word, category, score}] array.
+// The API returns hits as either result.hits (async) or results (sync).
+function _normaliseHits(resultObj) {
+  if (!resultObj) return [];
+  const hits = resultObj.hits || resultObj.results || [];
+  return hits.map(h => ({
+    text:     h.chunk_text || h.text || h.content || '',
+    word:     h.chunk_ref  || h.word || '',
+    category: h.category_slug || h.category || '',
+    score:    h.score || 0,
+  }));
 }
 
 async function callChatProxy(query, context, sources) {
