@@ -2,6 +2,10 @@
 
 **Drop-in hallucination-resistant retrieval for your own vector database.**
 
+Official site: **[prismrag.insightits.com](https://prismrag.insightits.com)** ·
+PyPI: **[pypi.org/project/prismrag-patch](https://pypi.org/project/prismrag-patch/)** ·
+Whitepaper: **[Deterministic Category Projection (PDF)](https://prismrag.insightits.com/whitepaper.html)**
+
 PrismRAG Patch wraps pgvector, ChromaDB, Pinecone, or Weaviate with PrismRAG's
 Tier-1 re-mapping technique — deterministic category projection that grounds every
 chunk in your verified taxonomy before it ever reaches the LLM.

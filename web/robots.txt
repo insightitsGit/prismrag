@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Marketing & docs — index freely
+Allow: /whitepaper.html
+Allow: /prismrag-lib.html
+Allow: /playground.html
+Allow: /mcp.html
+Allow: /api-docs.html
+Allow: /static/docs/
+
+# App pages — no SEO value
+Disallow: /dashboard.html
+Disallow: /admin.html
+Disallow: /oauth-callback.html
+Disallow: /reset-password.html
+Disallow: /forgot-password.html
+
+Sitemap: https://prismrag.insightits.com/sitemap.xml

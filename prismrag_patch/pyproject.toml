@@ -40,9 +40,12 @@ all      = [
 ]
 
 [project.urls]
-Homepage    = "https://prismrag.insightits.com/prismrag-lib.html"
-Repository  = "https://github.com/aminparva84/InsightPrismRAG"
+Homepage      = "https://prismrag.insightits.com"
+Documentation = "https://prismrag.insightits.com/prismrag-lib.html"
+Repository    = "https://github.com/aminparva84/InsightPrismRAG"
 "Bug Tracker" = "https://prismrag.insightits.com/support"
+"PyPI"        = "https://pypi.org/project/prismrag-patch/"
+"Whitepaper"  = "https://prismrag.insightits.com/whitepaper.html"
 
 [tool.setuptools.packages.find]
 where = ["."]
