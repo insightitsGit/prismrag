@@ -292,7 +292,8 @@
       });
       if (!r.ok) throw new Error('Invalid credentials');
       const data = await r.json();
-      TOKEN = data.access_token;
+      TOKEN = data.token || data.access_token;
+      if (!TOKEN) throw new Error('No token in response');
       localStorage.setItem('admin_token', TOKEN);
       init();
     } catch(e) {
