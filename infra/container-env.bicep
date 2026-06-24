@@ -17,11 +17,17 @@ param postgresSku string = 'Standard_B2s'
 @secure()
 param dbAdminPassword string = 'not-needed-for-phase1'
 
-// ── Log Analytics workspace ────────────────────────────────────────────────
+// ── Log Analytics workspace (kept for optional queries; capped — not ACA log sink) ──
 resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: 'prismrag-logs'
   location: location
-  properties: { sku: { name: 'PerGB2018' }, retentionInDays: 30 }
+  properties: {
+    sku: { name: 'PerGB2018' }
+    retentionInDays: 30
+    workspaceCapping: {
+      dailyQuotaGb: 0.1
+    }
+  }
 }
 
 // ── Azure Postgres (Phase 2+) ──────────────────────────────────────────────
@@ -59,11 +65,9 @@ resource env 'Microsoft.App/managedEnvironments@2023-05-01' = {
   location: location
   properties: {
     appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logWorkspace.properties.customerId
-        sharedKey: logWorkspace.listKeys().primarySharedKey
-      }
+      // azure-monitor: stop shipping every stdout line to Log Analytics (~$2.76/GB).
+      // App logs go to Blob via PRISMRAG_LOG_BLOB_ENABLED; errors → email.
+      destination: 'azure-monitor'
     }
   }
 }
