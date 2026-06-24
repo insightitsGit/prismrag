@@ -30,7 +30,10 @@ jobs:
       - name: Install package + test deps
         working-directory: prismrag_patch
         run: |
-          pip install -e ".[graph]" pytest requests --quiet
+          pip install ".[graph]" pytest requests --quiet
+
+      - name: Verify package import
+        run: python -c "from prismrag_patch import PrismRAG; print('OK', PrismRAG)"
 
       - name: Run library parity tests
         run: |
