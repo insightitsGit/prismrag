@@ -70,18 +70,16 @@
     "@type": "SoftwareApplication",
     "name": "PrismRAG — Semantic Re-mapping Engine",
     "applicationCategory": "BusinessApplication",
-    "applicationSubCategory": "Enterprise SaaS / RAG Platform",
-    "operatingSystem": "Cloud / API",
-    "url": "https://prismrag.insightits.com",
+    "applicationSubCategory": "Python Library / RAG Framework",
+    "operatingSystem": "Cross-platform (Python 3.10+)",
+    "url": "https://prismrag.insightits.com/prismrag-lib.html",
     "downloadUrl": "https://pypi.org/project/prismrag-patch/",
     "installUrl": "https://pypi.org/project/prismrag-patch/",
-    "softwareHelp": "https://prismrag.insightits.com/whitepaper.html",
-    "description": "Enterprise semantic re-mapping engine. Stops RAG category bleed by enforcing client-defined taxonomy via Tier-1 deterministic category projection. Replaces Graph RAG statistical relationship derivation with auditable mapping rules. Every client gets a fully isolated knowledge graph from the same source documents.",
+    "softwareHelp": "https://github.com/aminparva84/InsightPrismRAG/blob/main/INFO.md",
+    "license": "https://www.apache.org/licenses/LICENSE-2.0",
+    "description": "Free Apache-2.0 Python library. Stops RAG category bleed by enforcing client-defined taxonomy via Tier-1 deterministic category projection. Full ingest, graph RAG search, communities, bridges, and PostgresStore — pip install, no license key.",
     "offers": [
-      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "5,000 chunks/month" },
-      { "@type": "Offer", "name": "Starter", "price": "49", "priceCurrency": "USD", "billingIncrement": "month" },
-      { "@type": "Offer", "name": "Professional", "price": "199", "priceCurrency": "USD", "billingIncrement": "month" },
-      { "@type": "Offer", "name": "Enterprise", "price": "499", "priceCurrency": "USD", "billingIncrement": "month" }
+      { "@type": "Offer", "name": "Open Source", "price": "0", "priceCurrency": "USD", "description": "Apache-2.0 — full library on PyPI, no license key" }
     ],
     "featureList": [
       "Client-defined knowledge graph mapping",
@@ -203,7 +201,7 @@
         "name": "How is pricing structured?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "PrismRAG (knowledge graph): Free $0/mo (5,000 chunks), Starter $49/mo (50,000 chunks), Professional $199/mo (500,000 chunks + MLP + bridge vectors), Enterprise $499/mo (unlimited). Deliberation is included: 5 / 50 / 500 / unlimited sessions per month by tier. Overage: $0.25 per deliberation. All paid plans are monthly subscriptions."
+          "text": "prismrag-patch is free and open source (Apache-2.0) on PyPI. pip install prismrag-patch — full ingest, graph RAG, communities, bridges, and PostgresStore with no license key. Optional enterprise support from Insight IT Solutions for implementation and compliance."
         }
       },
       {
@@ -291,15 +289,14 @@
     </a>
     <ul class="nav-links">
       <li><a href="#products">Products</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li><a href="/api-docs.html">API</a></li>
-      <li><a href="/mcp.html">MCP</a></li>
+      <li><a href="/prismrag-lib.html">Library</a></li>
+      <li><a href="#pricing">Get started</a></li>
       <li><a href="/whitepaper.html">Whitepaper</a></li>
-      <li><a href="/playground.html">Playground</a></li>
+      <li><a href="https://github.com/aminparva84/InsightPrismRAG" target="_blank" rel="noopener">GitHub</a></li>
     </ul>
     <div class="nav-cta">
-      <a href="/login.html" class="btn-ghost">Sign in</a>
-      <a href="/register.html" class="btn-primary">Start free</a>
+      <a href="/prismrag-lib.html" class="btn-ghost">Docs</a>
+      <a href="https://pypi.org/project/prismrag-patch/" class="btn-primary" target="_blank" rel="noopener">pip install</a>
     </div>
     <button class="nav-toggle" id="nav-toggle" aria-label="Open menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -307,15 +304,13 @@
   </div>
   <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
     <a href="#products">Products</a>
+    <a href="/prismrag-lib.html">Library</a>
     <a href="#how-it-works">How it works</a>
-    <a href="#deliberation">Deliberation</a>
-    <a href="#pricing">Pricing</a>
-    <a href="/api-docs.html">API Docs</a>
-    <a href="/mcp.html">MCP</a>
-    <a href="/playground.html">Playground</a>
+    <a href="#pricing">Get started</a>
+    <a href="/whitepaper.html">Whitepaper</a>
     <div class="nav-mobile-cta">
-      <a href="/login.html" class="btn-ghost">Sign in</a>
-      <a href="/register.html" class="btn-primary">Start free</a>
+      <a href="/prismrag-lib.html" class="btn-ghost">Docs</a>
+      <a href="https://pypi.org/project/prismrag-patch/" class="btn-primary" target="_blank" rel="noopener">pip install</a>
     </div>
   </div>
 </nav>
@@ -337,28 +332,27 @@
         <p class="hero-sub">
           Enterprise RAG fails when retrieval returns the wrong category — <strong>category bleed</strong> creates hallucination paths agents cannot detect.
           <strong>PrismRAG</strong> applies deterministic category projection: your rules define the graph, every chunk is auditable, Graph RAG runs on <em>your</em> taxonomy.
-          <strong>Deliberation</strong> synthesises multi-domain answers with explicit conflict detection.
+          Ship with <code style="color:#2dd4bf;font-size:.9em;">pip install prismrag-patch</code> — free, Apache-2.0, no license key.
         </p>
         <div class="hero-actions">
-          <a href="/register.html" class="btn-hero-primary">
-            Start free — no card required
+          <a href="https://pypi.org/project/prismrag-patch/" class="btn-hero-primary" target="_blank" rel="noopener">
+            pip install prismrag-patch
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
-          <a href="/playground.html" class="btn-hero-ghost">
-            ▶ Try the Playground
+          <a href="/prismrag-lib.html" class="btn-hero-ghost">
+            Library docs →
           </a>
         </div>
         <div class="hero-code-block">
           <div class="code-tabs">
-            <span class="code-tab active" data-tab="graph">Knowledge Graph</span>
-            <span class="code-tab" data-tab="delib">Deliberation</span>
+            <span class="code-tab active" data-tab="graph">Python library</span>
+            <span class="code-tab" data-tab="delib">Postgres</span>
           </div>
           <pre class="code-snippet" id="code-snippet"><span class="c-comment"># Your mapping — not document statistics</span>
-<span class="c-keyword">POST</span> /api/prismrag/jobs
+<span class="c-keyword">from</span> prismrag_patch <span class="c-keyword">import</span> PrismRAG
 
-{
-  <span class="c-key">"strategy"</span>: <span class="c-str">"mlp"</span>,
-  <span class="c-key">"mapping"</span>: {
+rag = PrismRAG(
+  mapping={
     <span class="c-key">"categories"</span>: [
       { <span class="c-key">"slug"</span>: <span class="c-str">"risk"</span>,   <span class="c-key">"label"</span>: <span class="c-str">"Risk &amp; Compliance"</span> },
       { <span class="c-key">"slug"</span>: <span class="c-str">"growth"</span>, <span class="c-key">"label"</span>: <span class="c-str">"Growth"</span> }
@@ -366,8 +360,11 @@
     <span class="c-key">"rules"</span>: [
       { <span class="c-key">"word"</span>: <span class="c-str">"volatility"</span>, <span class="c-key">"category_slug"</span>: <span class="c-str">"risk"</span> }
     ]
-  }
-}</pre>
+  },
+  tenant_id=<span class="c-str">"demo"</span>
+)
+rag.ingest(records=[{<span class="c-key">"word"</span>: <span class="c-str">"volatility"</span>, <span class="c-key">"text"</span>: <span class="c-str">"market volatility report"</span>}])
+results = rag.search(<span class="c-str">"compliance exposure"</span>, top_k=5)</pre>
         </div>
       </div>
       <div class="hero-visual">
@@ -574,7 +571,7 @@
         <div style="font-size:1rem;font-weight:700;color:#e2e8f0;margin-bottom:6px;">The key insight</div>
         <div style="font-size:.9rem;color:#94a3b8;line-height:1.7;">Hallucination happens <em>before</em> the LLM. If retrieval returns the right chunk, the model doesn't need to guess. PrismRAG makes your domain knowledge the retrieval layer — so your agent reasons from your ground truth, not from what happened to be near what in a training corpus.</div>
       </div>
-      <a href="/register.html" style="flex-shrink:0;padding:12px 24px;background:#34d399;color:#0a0a12;border-radius:8px;font-weight:700;font-size:.875rem;text-decoration:none;white-space:nowrap;">Ground your agents free →</a>
+      <a href="https://pypi.org/project/prismrag-patch/" target="_blank" rel="noopener" style="flex-shrink:0;padding:12px 24px;background:#34d399;color:#0a0a12;border-radius:8px;font-weight:700;font-size:.875rem;text-decoration:none;white-space:nowrap;">pip install →</a>
     </div>
   </div>
 </section>
@@ -883,80 +880,41 @@
   </div>
 </section>
 
-<!-- ── PRICING ───────────────────────────────────────────────────────────── -->
+<!-- ── GET STARTED (OSS) ───────────────────────────────────────────────── -->
 <section class="pricing-section" id="pricing">
   <div class="container">
-    <div class="section-label">Pricing</div>
-    <h2 class="section-h2">Simple, transparent pricing</h2>
-    <p class="section-sub">Both products included in every plan. Start free — no credit card required.</p>
+    <div class="section-label">Get started</div>
+    <h2 class="section-h2">Free, open source, pip install</h2>
+    <p class="section-sub">The full PrismRAG library is Apache-2.0 on PyPI — ingest, graph RAG, communities, bridges, append, and PostgresStore. No license key. No hosted API required.</p>
 
-    <!-- PrismRAG pricing -->
-    <h3 style="font-size:18px;font-weight:700;color:#6c63ff;margin-bottom:24px;margin-top:0;">⬡ PrismRAG — Knowledge Graph</h3>
     <div class="pricing-grid">
-      <div class="pricing-card">
-        <div class="plan-name">Free</div>
-        <div class="plan-price"><span class="price-amount">$0</span><span class="price-period">/month</span></div>
-        <p class="plan-desc">Try PrismRAG with no commitment</p>
-        <ul class="plan-features">
-          <li><span class="check">✓</span> 5,000 chunks / month</li>
-          <li><span class="check">✓</span> 1 workspace</li>
-          <li><span class="check">✓</span> CSV / Excel ingestion</li>
-          <li><span class="check">✓</span> Graph RAG retrieval</li>
-          <li><span class="check dim">–</span> Tier-2 MLP training</li>
-          <li><span class="check dim">–</span> Bridge vectors</li>
-          <li><span class="check dim">–</span> Chunk export / portability</li>
-        </ul>
-        <a href="/register.html" class="plan-btn ghost">Start free</a>
-      </div>
-
-      <div class="pricing-card">
-        <div class="plan-name">Starter</div>
-        <div class="plan-price"><span class="price-amount">$49</span><span class="price-period">/month</span></div>
-        <p class="plan-desc">For teams building their first pipeline</p>
-        <ul class="plan-features">
-          <li><span class="check">✓</span> 50,000 chunks / month</li>
-          <li><span class="check">✓</span> 3 workspaces · 3 mappings</li>
-          <li><span class="check">✓</span> CSV / Excel / API ingestion</li>
-          <li><span class="check">✓</span> Graph RAG retrieval</li>
-          <li><span class="check">✓</span> Chunk export — 50K chunks/mo included</li>
-          <li><span class="check dim">–</span> Tier-2 MLP training</li>
-          <li><span class="check">✓</span> Email support</li>
-        </ul>
-        <a href="/register.html?plan=starter" class="plan-btn ghost" data-plan="starter">Get started</a>
-      </div>
-
       <div class="pricing-card popular">
-        <div class="popular-badge">Most popular</div>
-        <div class="plan-name">Professional</div>
-        <div class="plan-price"><span class="price-amount">$199</span><span class="price-period">/month</span></div>
-        <p class="plan-desc">Full ML stack for production deployments</p>
+        <div class="popular-badge">Primary</div>
+        <div class="plan-name">prismrag-patch</div>
+        <div class="plan-price"><span class="price-amount">$0</span><span class="price-period"> forever</span></div>
+        <p class="plan-desc">Apache-2.0 · PyPI · runs on your machine or Postgres</p>
         <ul class="plan-features">
-          <li><span class="check">✓</span> 500,000 chunks / month</li>
-          <li><span class="check">✓</span> 20 workspaces · 20 mappings</li>
-          <li><span class="check">✓</span> All ingestion sources</li>
-          <li><span class="check">✓</span> Tier-2 MLP training</li>
-          <li><span class="check">✓</span> Graph RAG + Bridge vectors</li>
-          <li><span class="check">✓</span> Chunk export — 500K chunks/mo included</li>
-          <li><span class="check">✓</span> Webhook push on job complete</li>
-          <li><span class="check">✓</span> Priority support</li>
+          <li><span class="check">✓</span> Full ingest + graph RAG search</li>
+          <li><span class="check">✓</span> Communities, bridges, append mode</li>
+          <li><span class="check">✓</span> MemoryStore + PostgresStore</li>
+          <li><span class="check">✓</span> pgvector, Chroma, Pinecone, Weaviate adapters</li>
+          <li><span class="check">✓</span> Bring your own embed function</li>
+          <li><span class="check">✓</span> No license key or phone-home</li>
         </ul>
-        <a href="/register.html?plan=professional" class="plan-btn primary" data-plan="professional">Start Professional</a>
+        <a href="https://pypi.org/project/prismrag-patch/" class="plan-btn primary" target="_blank" rel="noopener">pip install prismrag-patch</a>
       </div>
 
       <div class="pricing-card">
-        <div class="plan-name">Enterprise</div>
-        <div class="plan-price"><span class="price-amount">$499</span><span class="price-period">/month</span></div>
-        <p class="plan-desc">Unlimited scale, SCIM SSO, CMEK, and dedicated support</p>
+        <div class="plan-name">Enterprise support</div>
+        <div class="plan-price"><span class="price-amount">Custom</span></div>
+        <p class="plan-desc">Implementation, compliance mapping, private deployments</p>
         <ul class="plan-features">
-          <li><span class="check">✓</span> Unlimited chunks</li>
-          <li><span class="check">✓</span> Unlimited chunk export</li>
-          <li><span class="check">✓</span> Unlimited workspaces</li>
-          <li><span class="check">✓</span> SCIM SSO + CMEK</li>
-          <li><span class="check">✓</span> 99.9% SLA</li>
-          <li><span class="check">✓</span> Dedicated support engineer</li>
+          <li><span class="check">✓</span> Architecture review for your taxonomy</li>
+          <li><span class="check">✓</span> Postgres + pgvector production setup</li>
+          <li><span class="check">✓</span> ISO 27001 / regulated industry guidance</li>
+          <li><span class="check">✓</span> Optional self-host of legacy SaaS API</li>
         </ul>
-        <a href="/register.html?plan=enterprise" class="plan-btn ghost" data-plan="enterprise">Start Enterprise</a>
-        <p style="font-size:12px;color:#666;margin-top:12px;">Need custom terms? <a href="mailto:prismrag@insightits.com?subject=Enterprise%20Inquiry" style="color:#6c63ff;">Contact sales</a></p>
+        <a href="mailto:prismrag@insightits.com?subject=PrismRAG%20Enterprise%20Support" class="plan-btn ghost">Contact sales</a>
       </div>
     </div>
 
@@ -964,89 +922,21 @@
     <div style="background:linear-gradient(135deg,rgba(124,106,247,.08),rgba(45,212,191,.06));border:1px solid rgba(124,106,247,.25);border-radius:14px;padding:32px 36px;margin-top:40px;display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;">
       <div style="flex:0 0 auto;font-size:2rem;">📦</div>
       <div style="flex:1;min-width:240px;">
-        <h3 style="font-size:1.05rem;font-weight:700;color:#e2e8f0;margin:0 0 8px;">Chunk Export &amp; Portability</h3>
+        <h3 style="font-size:1.05rem;font-weight:700;color:#e2e8f0;margin:0 0 8px;">You own your data</h3>
         <p style="color:#8892a4;font-size:.875rem;line-height:1.65;margin:0 0 12px;">
-          You own your remapped data. Export your categorised chunks — with 256-d embeddings — directly into your own pgvector database.
-          Plug them into any AI agent, LangChain pipeline, or custom RAG system without a runtime dependency on our API.
+          Export categorised chunks with dual vectors from <code style="color:#2dd4bf;">rag.export_chunks()</code> or read directly from your Postgres <code style="color:#2dd4bf;">prismrag.*</code> tables.
+          Plug into LangChain, agents, or any custom RAG stack — no runtime dependency on a hosted API.
         </p>
-        <div style="display:flex;gap:24px;flex-wrap:wrap;">
-          <div style="font-size:.8rem;color:#7c6af7;"><strong>Starter / Pro</strong> — included in your chunk quota</div>
-          <div style="font-size:.8rem;color:#2dd4bf;"><strong>Overage</strong> — $0.50 per 1,000 chunks exported</div>
-          <div style="font-size:.8rem;color:#48bb78;"><strong>Enterprise</strong> — unlimited export</div>
-        </div>
         <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
-          <code style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 12px;font-size:.75rem;color:#2dd4bf;">GET /api/v1/prismrag/tenants/{id}/chunks</code>
-          <span style="color:#555;font-size:.8rem;align-self:center;">or</span>
-          <code style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 12px;font-size:.75rem;color:#2dd4bf;">webhook_url → {chunks: [...]}</code>
+          <code style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 12px;font-size:.75rem;color:#2dd4bf;">pip install "prismrag-patch[graph]"</code>
+          <a href="/prismrag-lib.html" style="color:#7c6af7;font-size:.8rem;font-weight:600;text-decoration:none;">Library docs →</a>
         </div>
       </div>
     </div>
 
-    <!-- Deliberation pricing -->
-    <h3 style="font-size:18px;font-weight:700;color:#32cd78;margin-bottom:24px;margin-top:64px;">◈ Deliberation — Multi-Domain AI Synthesis</h3>
-    <p style="color:#777;font-size:14px;margin-bottom:32px;margin-top:-16px;">Included with every PrismRAG plan. Deliberation credits are separate from chunk limits.</p>
-    <div class="delib-pricing-grid">
-      <div class="delib-pricing-card">
-        <div class="dp-plan">Free</div>
-        <div class="dp-price">$0<span>/month</span></div>
-        <div class="dp-delibs">5 deliberations / month</div>
-        <ul class="dp-features">
-          <li>Up to 7 domains per session</li>
-          <li>Sync + async mode</li>
-          <li>Follow-up questions (free)</li>
-          <li>REST API access</li>
-        </ul>
-        <a href="/register.html" class="dp-btn">Start free</a>
-      </div>
-
-      <div class="delib-pricing-card">
-        <div class="dp-plan">Starter</div>
-        <div class="dp-price">$29<span>/month</span></div>
-        <div class="dp-delibs">50 deliberations / month</div>
-        <ul class="dp-features">
-          <li>Up to 7 domains per session</li>
-          <li>Sync + async mode</li>
-          <li>Follow-up questions (free)</li>
-          <li>$0.25 per overage deliberation</li>
-        </ul>
-        <a href="/register.html?plan=starter" class="dp-btn">Get started</a>
-      </div>
-
-      <div class="delib-pricing-card highlight">
-        <div class="dp-plan">Professional</div>
-        <div class="dp-price">$99<span>/month</span></div>
-        <div class="dp-delibs">500 deliberations / month</div>
-        <ul class="dp-features">
-          <li>Up to 10 domains per session</li>
-          <li>KB-grounded per domain</li>
-          <li>MCP tools included</li>
-          <li>$0.25 per overage deliberation</li>
-        </ul>
-        <a href="/register.html?plan=professional" class="dp-btn primary">Start Professional</a>
-      </div>
-
-      <div class="delib-pricing-card">
-        <div class="dp-plan">Enterprise</div>
-        <div class="dp-price">Included<span>/month</span></div>
-        <div class="dp-delibs">Unlimited deliberations</div>
-        <ul class="dp-features">
-          <li>Unlimited domains</li>
-          <li>Custom domain taxonomy</li>
-          <li>Private MCP endpoint</li>
-          <li>Dedicated support</li>
-        </ul>
-        <a href="/register.html?plan=enterprise" class="dp-btn" data-plan="enterprise">Start Enterprise</a>
-      </div>
-    </div>
-
-    <!-- Bundle note -->
-    <div style="margin-top:40px;padding:24px 28px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);border-radius:12px;display:flex;gap:16px;align-items:center;">
-      <div style="font-size:28px;">💡</div>
-      <div>
-        <div style="font-size:15px;font-weight:700;color:#e8e8f0;margin-bottom:4px;">Bundle both products</div>
-        <div style="font-size:13px;color:#888;">All paid plans are <strong>monthly subscriptions</strong>. PrismRAG + Deliberation are bundled per tier — Starter $49/mo, Professional $199/mo, Enterprise $499/mo. Contact sales for annual billing discounts.</div>
-      </div>
-    </div>
+    <p style="text-align:center;color:#666;font-size:.8rem;margin-top:32px;">
+      Hosted SaaS plans (Playground, metered API) were retired in 2026. Legacy code remains in the GitHub repo for self-host reference.
+    </p>
   </div>
 </section>
 
@@ -1088,9 +978,9 @@
     <div class="cta-inner">
       <div class="cta-prism"><img src="/static/img/logo.svg" alt="" width="56" height="56" style="margin:0 auto;display:block;"/></div>
       <h2>Ready to own your knowledge graph?</h2>
-      <p>5,000 free chunks and 5 free deliberations every month. No credit card. Full API access from day one.</p>
+      <p>Install the free Apache-2.0 library, define your taxonomy, and run graph RAG on your rules — locally or on Postgres.</p>
       <div class="cta-actions">
-        <a href="/register.html" class="btn-hero-primary">Start building free</a>
+        <a href="https://pypi.org/project/prismrag-patch/" class="btn-hero-primary" target="_blank" rel="noopener">pip install prismrag-patch</a>
         <a href="mailto:prismrag@insightits.com" class="btn-hero-ghost">Talk to sales</a>
       </div>
     </div>
@@ -1118,12 +1008,12 @@
         </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
           <a href="/prismrag-lib.html" style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;background:#7c6af7;color:#fff;border-radius:10px;font-weight:700;font-size:.9rem;text-decoration:none;">
-            See pricing &amp; docs →
+            Library docs →
           </a>
           <a href="https://pypi.org/project/prismrag-patch/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border:1.5px solid #252840;color:#2dd4bf;border-radius:10px;font-weight:600;font-size:.9rem;text-decoration:none;">
             pip install on PyPI ↗
           </a>
-          <span style="color:#8892a4;font-size:.875rem;">From <strong style="color:#e2e8f0;">$167/month</strong> · Annual $2,000/yr</span>
+          <span style="color:#8892a4;font-size:.875rem;">Free · <strong style="color:#e2e8f0;">Apache-2.0</strong> · no license key</span>
         </div>
       </div>
       <div style="background:#0f1117;border:1px solid #252840;border-radius:14px;overflow:hidden;">
@@ -1133,18 +1023,16 @@
           <div style="width:10px;height:10px;border-radius:50%;background:#48bb78;"></div>
           <span style="font-size:.7rem;color:#8892a4;font-family:'JetBrains Mono',monospace;margin-left:8px;">your_rag.py</span>
         </div>
-        <pre style="padding:24px;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.75;color:#c9d1d9;overflow-x:auto;margin:0;"><span style="color:#6a7384;"># 5 lines to ground your RAG</span>
-<span style="color:#7c6af7;font-weight:600;">from</span> prismrag_patch <span style="color:#7c6af7;font-weight:600;">import</span> PrismRAGPatch
+        <pre style="padding:24px;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.75;color:#c9d1d9;overflow-x:auto;margin:0;"><span style="color:#6a7384;"># Full client or Tier-1 adapter</span>
+<span style="color:#7c6af7;font-weight:600;">from</span> prismrag_patch <span style="color:#7c6af7;font-weight:600;">import</span> PrismRAG, PrismRAGPatch
 <span style="color:#7c6af7;font-weight:600;">from</span> prismrag_patch.adapters.pgvector <span style="color:#7c6af7;font-weight:600;">import</span> PgvectorAdapter
 
-patch   = PrismRAGPatch(license_key=<span style="color:#2dd4bf;">"prlib_…"</span>, mapping=your_map)
+rag = PrismRAG(mapping=your_map, tenant_id=<span style="color:#2dd4bf;">"prod"</span>)
+rag.ingest(records=[{<span style="color:#2dd4bf;">"word"</span>: <span style="color:#2dd4bf;">"diabetes"</span>, <span style="color:#2dd4bf;">"text"</span>: <span style="color:#2dd4bf;">"diabetes care plan"</span>}])
+
+patch   = PrismRAGPatch(mapping=your_map)
 adapter = PgvectorAdapter(patch, connection=your_conn)
-
-<span style="color:#6a7384;"># insert → re-mapped before storage</span>
-adapter.insert(text=doc, vector=embed(doc))
-
-<span style="color:#6a7384;"># search → query re-mapped identically</span>
-results = adapter.search(<span style="color:#2dd4bf;">"fever treatment"</span>, query_vector=q)</pre>
+results = adapter.search(<span style="color:#2dd4bf;">"insulin medication"</span>, query_vector=q)</pre>
       </div>
     </div>
   </div>

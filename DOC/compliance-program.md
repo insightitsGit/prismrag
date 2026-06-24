@@ -1,5 +1,7 @@
 ﻿# PrismRAG — SOC 2 & ISO 27001 Compliance Program Starter
 
+> **Note (2026):** Compliance mappings reference **legacy SaaS** controls. Library users run on their own infra — adapt controls to your deployment. Overview: [INFO.md](../INFO.md).
+
 This is the **organizational** layer. Product controls are in [`iso27001-control-mapping.md`](iso27001-control-mapping.md).
 
 ## What the product now provides

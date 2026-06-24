@@ -1,21 +1,25 @@
 ﻿# PrismRAG — Product Requirements Document
 
-**Version:** 0.1  
-**Date:** 2026-06-18  
+**Version:** 0.2  
+**Date:** 2026-06-24  
 **Owner:** Insight IT Solutions (prismrag@insightits.com)
+
+> **Status (2026):** Primary product is the **pip library** `prismrag-patch` (Apache-2.0, no license key).  
+> Azure SaaS is **retired**. Sections below describe the archived hosted API in `prismrag/` plus library requirements.  
+> Landing-page source: [INFO.md](../INFO.md)
 
 ---
 
 ## 1. Overview
 
-PrismRAG is a two-part product:
+PrismRAG is a two-part codebase; **ship the library**:
 
 | Component | What it is |
 |---|---|
-| **PrismRAG SaaS** | Multi-tenant FastAPI platform hosted on Azure Container Apps. Accepts documents from any source, embeds them, applies hallucination-resistant re-mapping, and serves semantic search + deliberation via REST API. |
-| **prismrag-patch** | Pip-installable Python library. Lets users apply PrismRAG's re-mapping algorithm to their own vector databases (pgvector, ChromaDB, Pinecone, Weaviate) without moving data to PrismRAG's cloud. |
+| **prismrag-patch** (primary) | Pip-installable Python library. Full ingest, graph RAG, communities, bridges, append, quality. `MemoryStore`, `PostgresStore`, or Tier-1 adapters (pgvector, ChromaDB, Pinecone, Weaviate). **No license key.** |
+| **PrismRAG SaaS** (archived) | Multi-tenant FastAPI platform that was hosted on Azure Container Apps. Code in `prismrag/` for self-host reference only. |
 
-Both products share the same license server and the same core mapping algorithm (Tier-1 deterministic category projection).
+Both share the same core mapping algorithm (Tier-1 deterministic category projection).
 
 ---
 
@@ -23,15 +27,16 @@ Both products share the same license server and the same core mapping algorithm 
 
 | Persona | Description | Primary touchpoint |
 |---|---|---|
-| **SaaS User** | Developer or analyst who ingests company data, configures mappings, and queries via dashboard or API | Web dashboard, REST API |
-| **Library User** | Developer who already has a vector DB and wants to add hallucination resistance without re-ingesting data | `pip install prismrag-patch`, their own app code |
-| **Super Admin** | Insight IT team (prismrag@insightits.com). Issues library licenses, manages plans, views all tenants | `/api/v1/admin/*`, `/api/v1/lib/licenses` |
-| **Tenant Admin** | Customer with "admin" role within their workspace. Can invite members, configure SCIM, see billing | Dashboard enterprise tab |
-| **Guest / Playground User** | Unauthenticated visitor who tries Sandbox mode in the Playground | `/playground.html` |
+| **Library User** (primary) | Developer running RAG locally or on their Postgres / vector DB | `pip install prismrag-patch`, [INFO.md](../INFO.md) |
+| **Postgres User** | Team using `PostgresStore` with `prismrag.*` schema | `PrismRAG.from_postgres()` |
+| **SaaS User** (archived) | Developer who used hosted ingest + REST API | Legacy `prismrag/api/` |
+| **Super Admin** (archived) | Insight IT team managing hosted tenants | `/api/v1/admin/*` |
+| **Tenant Admin** (archived) | Customer workspace admin | Dashboard enterprise tab |
+| **Guest / Playground User** (archived) | Unauthenticated sandbox | `/playground.html` |
 
 ---
 
-## 3. PrismRAG SaaS — Functional Requirements
+## 3. PrismRAG SaaS — Functional Requirements (archived)
 
 ### 3.1 Data Ingestion
 

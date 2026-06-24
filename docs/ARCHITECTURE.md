@@ -1,7 +1,10 @@
 ﻿# PrismRAG — Architecture Document
 
-**Version:** 0.1  
-**Date:** 2026-06-18
+**Version:** 0.2  
+**Date:** 2026-06-24
+
+> **Status (2026):** Primary architecture is the **pip library** — see [INFO.md](../INFO.md) and [DOC/architecture.md](../DOC/architecture.md).  
+> Diagram below includes **archived** Azure SaaS paths (retired).
 
 ---
 

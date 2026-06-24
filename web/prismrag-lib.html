@@ -127,28 +127,28 @@
 <nav>
   <a href="/" class="logo">⬡ PrismRAG</a>
   <a href="/">Home</a>
-  <a href="#how-it-works">How it works</a>
+  <a href="#quickstart">Quickstart</a>
   <a href="#adapters">Adapters</a>
-  <a href="#pricing">Pricing</a>
-  <a href="/docs">API</a>
-  <a href="#pricing" class="btn-nav">Get a license →</a>
+  <a href="#pricing">Get started</a>
+  <a href="https://github.com/aminparva84/InsightPrismRAG/blob/main/INFO.md" target="_blank" rel="noopener">Docs</a>
+  <a href="https://pypi.org/project/prismrag-patch/" class="btn-nav" target="_blank" rel="noopener">pip install →</a>
 </nav>
 
 <!-- ── HERO ────────────────────────────────────────────────────────────────── -->
 <section class="hero">
-  <div class="hero-label">Python Library · Drop-in patch</div>
+  <div class="hero-label">Python Library · Apache-2.0 · PyPI</div>
   <h1>
-    Stop hallucination<br/>
+    Stop category bleed<br/>
     <span>in your own vector database.</span>
   </h1>
   <p class="hero-sub">
-    5 lines of code. Your pgvector, ChromaDB, Pinecone, or Weaviate database — no migration, no new infrastructure, no data leaves your environment.
-    PrismRAG Patch re-maps every vector through your verified rules before it's stored and before it's searched.
+    Free, open source, pip install. Full graph RAG client or Tier-1 adapters for pgvector, ChromaDB, Pinecone, and Weaviate.
+    Your mapping rules define the graph — no hosted API, no license key, no data leaves your environment.
   </p>
   <div class="hero-actions">
-    <a href="https://pypi.org/project/prismrag-patch/" target="_blank" rel="noopener" class="btn-primary">pip install on PyPI ↗</a>
-    <a href="#pricing" class="btn-ghost">Get a license — $167/month</a>
-    <a href="https://prismrag.insightits.com" class="btn-ghost">PrismRAG SaaS →</a>
+    <a href="https://pypi.org/project/prismrag-patch/" target="_blank" rel="noopener" class="btn-primary">pip install prismrag-patch ↗</a>
+    <a href="#quickstart" class="btn-ghost">Quickstart →</a>
+    <a href="https://github.com/aminparva84/InsightPrismRAG" target="_blank" rel="noopener" class="btn-ghost">GitHub →</a>
   </div>
 
   <div class="code-hero">
@@ -165,7 +165,7 @@ cursor.execute(<span class="c-str">"INSERT INTO docs (embedding) VALUES (%s)"</s
 <span class="c-kw">from</span> prismrag_patch <span class="c-kw">import</span> PrismRAGPatch
 <span class="c-kw">from</span> prismrag_patch.adapters.pgvector <span class="c-kw">import</span> PgvectorAdapter
 
-patch   = PrismRAGPatch(license_key=<span class="c-str">"prlib_your_key"</span>, mapping=your_mapping)
+patch   = PrismRAGPatch(mapping=your_mapping)
 adapter = PgvectorAdapter(patch, connection=your_conn)
 
 adapter.insert(text=<span class="c-str">"Patient has fever"</span>, vector=my_vector)   <span class="c-comment"># ← remapped</span>
@@ -279,15 +279,13 @@ results = adapter.search(<span class="c-str">"fever symptoms"</span>, query_vect
         <span style="margin-left:8px;">quickstart_pgvector.py</span>
       </div>
       <pre><span class="c-comment"># 1. Install</span>
-<span class="c-comment">#    pip install prismrag-patch[pgvector]</span>
+<span class="c-comment">#    pip install "prismrag-patch[graph,pgvector]"</span>
 
-<span class="c-kw">from</span> prismrag_patch <span class="c-kw">import</span> PrismRAGPatch
+<span class="c-kw">from</span> prismrag_patch <span class="c-kw">import</span> PrismRAG, PrismRAGPatch
 <span class="c-kw">from</span> prismrag_patch.adapters.pgvector <span class="c-kw">import</span> PgvectorAdapter
 
-<span class="c-comment"># 2. Define your knowledge mapping</span>
-patch = PrismRAGPatch(
-    license_key=<span class="c-str">"prlib_your_key_here"</span>,   <span class="c-comment"># get at prismrag.insightits.com/lib</span>
-    mapping={
+<span class="c-comment"># 2. Full client (ingest + graph RAG) or adapter-only remap</span>
+rag = PrismRAG(mapping={
         <span class="c-str">"categories"</span>: [
             {<span class="c-str">"slug"</span>: <span class="c-str">"symptoms"</span>,  <span class="c-str">"label"</span>: <span class="c-str">"Symptoms &amp; Signs"</span>},
             {<span class="c-str">"slug"</span>: <span class="c-str">"treatment"</span>, <span class="c-str">"label"</span>: <span class="c-str">"Treatment &amp; Therapy"</span>},
@@ -300,7 +298,10 @@ patch = PrismRAGPatch(
             {<span class="c-str">"word"</span>: <span class="c-str">"hypertension"</span>, <span class="c-str">"category_slug"</span>: <span class="c-str">"diagnosis"</span>},
         ],
     },
+    tenant_id=<span class="c-str">"demo"</span>,
 )
+
+patch = PrismRAGPatch(mapping=rag.mapping)
 
 <span class="c-comment"># 3. Wrap your existing connection — no schema changes</span>
 adapter = PgvectorAdapter(patch, dsn=<span class="c-str">"postgresql://user:pass@localhost/mydb"</span>)
@@ -316,66 +317,61 @@ results = adapter.search(<span class="c-str">"fever treatment"</span>, query_vec
   </div>
 </section>
 
-<!-- ── PRICING ──────────────────────────────────────────────────────────────── -->
+<!-- ── GET STARTED ──────────────────────────────────────────────────────────── -->
 <section class="section" id="pricing">
   <div class="container">
-    <div class="section-label">Pricing</div>
-    <h2 class="section-h2">One license per company. Unlimited developers.</h2>
-    <p class="section-sub">All plans include all four adapters, updates for the duration of the license, and email support. Cancel any time — no long-term commitment required.</p>
+    <div class="section-label">Get started</div>
+    <h2 class="section-h2">Free on PyPI. Enterprise support optional.</h2>
+    <p class="section-sub">The library is Apache-2.0 with no license key. Install extras for graph algorithms, Postgres, or vector DB adapters.</p>
 
     <div class="pricing-grid">
 
-      <div class="plan">
-        <div class="plan-name">Monthly</div>
-        <div class="plan-price">$199<sub>/mo</sub></div>
-        <div class="plan-period">Billed monthly · Cancel any time</div>
-        <ul class="plan-features">
-          <li>1 company license (unlimited devs)</li>
-          <li>pgvector + ChromaDB adapters</li>
-          <li>Pinecone + Weaviate adapters</li>
-          <li>License validation API (500k calls/day)</li>
-          <li>Updates while subscribed</li>
-          <li>Email support (48h response)</li>
-        </ul>
-        <a href="mailto:prismrag@insightits.com?subject=PrismRAG+Patch+Monthly+License&body=Company%20name%3A%0AContact%20name%3A%0AVector%20DB%3A%20(pgvector%20%2F%20Chroma%20%2F%20Pinecone%20%2F%20Weaviate)" class="plan-btn ghost">Get started →</a>
-      </div>
-
       <div class="plan popular">
-        <div class="popular-badge">Best value · Save $388/year</div>
-        <div class="plan-name">Annual</div>
-        <div class="plan-price">$2,000<sub>/yr</sub></div>
-        <div class="plan-period">$167/month · Billed once per year</div>
+        <div class="popular-badge">Open source</div>
+        <div class="plan-name">prismrag-patch</div>
+        <div class="plan-price">$0</div>
+        <div class="plan-period">Apache-2.0 · unlimited developers</div>
         <ul class="plan-features">
-          <li>1 company license (unlimited devs)</li>
-          <li>All 4 adapters included</li>
-          <li>License validation API (500k calls/day)</li>
-          <li>12 months of updates</li>
-          <li>Priority email support (24h response)</li>
-          <li>Invoice &amp; PO available</li>
+          <li>Full PrismRAG client + PostgresStore</li>
+          <li>Graph RAG, communities, bridges, append</li>
+          <li>pgvector, Chroma, Pinecone, Weaviate adapters</li>
+          <li>Works fully offline — no phone-home</li>
+          <li>Source on GitHub</li>
         </ul>
-        <a href="mailto:prismrag@insightits.com?subject=PrismRAG+Patch+Annual+License&body=Company%20name%3A%0AContact%20name%3A%0AVector%20DB%3A%20(pgvector%20%2F%20Chroma%20%2F%20Pinecone%20%2F%20Weaviate)" class="plan-btn primary">Buy annual license →</a>
+        <a href="https://pypi.org/project/prismrag-patch/" class="plan-btn primary" target="_blank" rel="noopener">pip install →</a>
       </div>
 
       <div class="plan">
-        <div class="plan-name">Enterprise</div>
-        <div class="plan-price" style="font-size:1.5rem;padding-top:8px;">Custom</div>
-        <div class="plan-period">Multi-site · Source code license · SLA</div>
+        <div class="plan-name">Install extras</div>
+        <div class="plan-price" style="font-size:1.1rem;padding-top:8px;">pip extras</div>
+        <div class="plan-period">Choose what you need</div>
         <ul class="plan-features">
-          <li>Unlimited company sites / subsidiaries</li>
-          <li>Source code license available</li>
-          <li>Custom adapter development</li>
-          <li>Oracle AI Vector Search adapter</li>
-          <li>Dedicated Slack channel</li>
-          <li>4h SLA response</li>
+          <li><code>[graph]</code> — Louvain + full pipeline</li>
+          <li><code>[postgres]</code> — PostgresStore + psycopg</li>
+          <li><code>[pgvector]</code>, <code>[chroma]</code>, etc.</li>
+          <li><code>pip install "prismrag-patch[graph,postgres]"</code></li>
         </ul>
-        <a href="mailto:prismrag@insightits.com?subject=PrismRAG+Patch+Enterprise" class="plan-btn ghost">Contact sales →</a>
+        <a href="https://github.com/aminparva84/InsightPrismRAG/blob/main/INFO.md" class="plan-btn ghost" target="_blank" rel="noopener">Read INFO.md →</a>
+      </div>
+
+      <div class="plan">
+        <div class="plan-name">Enterprise support</div>
+        <div class="plan-price" style="font-size:1.5rem;padding-top:8px;">Custom</div>
+        <div class="plan-period">Implementation · compliance · private deploy</div>
+        <ul class="plan-features">
+          <li>Taxonomy design workshops</li>
+          <li>Production Postgres + pgvector setup</li>
+          <li>Regulated industry for healthcare / finance</li>
+          <li>Optional self-host of legacy SaaS API</li>
+        </ul>
+        <a href="mailto:prismrag@insightits.com?subject=PrismRAG+Enterprise+Support" class="plan-btn ghost">Contact sales →</a>
       </div>
 
     </div>
 
     <div style="margin-top:32px;padding:20px 28px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:.875rem;color:var(--muted);">
-      🔒 <strong style="color:var(--text);">How licensing works:</strong>
-      You receive a <code>prlib_</code> key. On startup the library validates it against our server (result cached 23 hours — no latency on queries). After your subscription ends you have a 7-day grace period. Keys are company-scoped — share freely within your team.
+      🔓 <strong style="color:var(--text);">No license key required.</strong>
+      Previous paid library licenses were retired in 2026. The OSS package includes everything — install from PyPI and run locally or against your Postgres.
     </div>
   </div>
 </section>
@@ -388,27 +384,27 @@ results = adapter.search(<span class="c-str">"fever treatment"</span>, query_vec
     <div class="faq-list">
       <div class="faq-item">
         <div class="faq-q">Does my data ever leave my environment?</div>
-        <div class="faq-a">No. All re-mapping is computed locally using your mapping rules. Only the license key is validated against our server — no embeddings, no queries, no documents are ever sent to us.</div>
+        <div class="faq-a">No. All re-mapping and graph RAG run in your Python process. Embeddings, queries, and documents never go to a PrismRAG hosted API. Use MemoryStore locally or PostgresStore on your database.</div>
       </div>
       <div class="faq-item">
-        <div class="faq-q">What happens if the license server is unreachable?</div>
-        <div class="faq-a">The library caches the validation result locally for 23 hours. If the cache is valid, your application continues working offline. If both the server and cache are unavailable on startup, an error is raised with a clear message.</div>
+        <div class="faq-q">Do I need a license key?</div>
+        <div class="faq-a">No. The library is Apache-2.0 on PyPI with no license validation or phone-home.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">Do I need to change my database schema?</div>
-        <div class="faq-a">No. The adapter wraps your existing connection. Vectors are remapped in memory before the INSERT/upsert call — your schema, indexes, and existing data are untouched. The only change is the float values in your embedding column.</div>
+        <div class="faq-a">For adapters: no — vectors are remapped in memory before INSERT. For PostgresStore: apply the <code>prismrag.*</code> schema once (<code>prismrag/schema.sql</code>).</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">What about existing embeddings already in my database?</div>
-        <div class="faq-a">Existing embeddings were stored without re-mapping. You can backfill by fetching them, applying <code>patch.remap(text, vector)</code>, and updating. We provide a backfill utility script with every license.</div>
+        <div class="faq-a">Backfill by fetching them, applying <code>patch.remap_vector(vector, text=...)</code>, and updating. Or re-ingest through <code>PrismRAG.ingest()</code> for the full graph pipeline.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q">Can I use my own embedding model?</div>
-        <div class="faq-a">Yes — PrismRAG Patch is embedding-model agnostic. It works with any vector, regardless of dimension or model (OpenAI, Cohere, Gemini, local models, etc.). You embed, we remap.</div>
+        <div class="faq-a">Yes — pass <code>embed_fn</code> to <code>PrismRAG</code> or embed externally for adapters. Any dimension works.</div>
       </div>
       <div class="faq-item">
-        <div class="faq-q">How many developers can use one license?</div>
-        <div class="faq-a">Unlimited. One license covers your entire company — all developers, all services, all environments (dev, staging, prod). The <code>500k calls/day</code> limit is on license validation calls (cached 23h), not on your actual query volume.</div>
+        <div class="faq-q">Full client vs adapter-only?</div>
+        <div class="faq-a"><code>PrismRAG</code> gives ingest, graph RAG, communities, bridges, and append. Adapters add Tier-1 remap to your existing vector DB — use <code>PostgresStore</code> for graph features on Postgres.</div>
       </div>
     </div>
   </div>
@@ -418,10 +414,10 @@ results = adapter.search(<span class="c-str">"fever treatment"</span>, query_vec
 <section class="cta">
   <div class="container">
     <h2>Ready to ground your AI agents?</h2>
-    <p>Email us your company name and vector database. We'll send a trial key within one business day.</p>
+    <p>Install the free library, define your taxonomy, and run graph RAG on your rules.</p>
     <div class="hero-actions" style="justify-content:center;">
-      <a href="mailto:prismrag@insightits.com?subject=PrismRAG+Patch+Annual+License&body=Company%20name%3A%0AContact%20name%3A%0AVector%20DB%3A%20(pgvector%20%2F%20Chroma%20%2F%20Pinecone%20%2F%20Weaviate)%0A%0AMessage%3A" class="btn-primary">Buy annual — $2,000/year</a>
-      <a href="mailto:prismrag@insightits.com?subject=PrismRAG+Patch+Trial" class="btn-ghost">Request a free trial key</a>
+      <a href="https://pypi.org/project/prismrag-patch/" class="btn-primary" target="_blank" rel="noopener">pip install prismrag-patch</a>
+      <a href="mailto:prismrag@insightits.com?subject=PrismRAG+Enterprise+Support" class="btn-ghost">Enterprise support</a>
     </div>
   </div>
 </section>

@@ -1,8 +1,10 @@
 # PrismRAG — pip-only OSS library
 
-**PrismRAG** is now a free, Apache-2.0 Python library published on PyPI as [`prismrag-patch`](https://pypi.org/project/prismrag-patch/).
+**PrismRAG** is a free, Apache-2.0 Python library on PyPI: [`prismrag-patch` **0.2.1**](https://pypi.org/project/prismrag-patch/0.2.1/) (published).
 
-The Azure SaaS deployment has been retired to eliminate hosting cost. All core RAG features (ingest, graph search, communities, bridges, append) run locally or against your own Postgres.
+📄 **[INFO.md](INFO.md)** — full product overview, landing-page copy, FAQ, architecture summary.
+
+The Azure SaaS deployment was retired. All core RAG features run locally or on your Postgres.
 
 ## Install
 

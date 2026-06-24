@@ -1,5 +1,7 @@
 # Deterministic Category Projection in Retrieval-Augmented Generation: Architecture, Mathematics, and Implementation of PrismRAG
 
+> **Product:** Implemented in free pip library `prismrag-patch` — [INFO.md](../INFO.md).
+
 **Author:** Amin Parva  
 **Affiliation:** Insight IT Solutions  
 **Contact:** prismrag@insightits.com  

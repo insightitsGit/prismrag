@@ -2,10 +2,11 @@
 
 **Free OSS RAG library with full API core parity — ingest, graph RAG search, communities, bridges, append.**
 
-Official site: **[prismrag.insightits.com](https://prismrag.insightits.com)** ·
+Official site: **[prismrag.insightits.com/prismrag-lib.html](https://prismrag.insightits.com/prismrag-lib.html)** ·
+Product overview: **[INFO.md](../INFO.md)** ·
 PyPI: **[pypi.org/project/prismrag-patch](https://pypi.org/project/prismrag-patch/)**
 
-## What's new in 0.2.0
+## What's in 0.2.1
 
 - **No license key** — Apache-2.0, pip-only, fully offline
 - **`PrismRAG` client** — mirrors SaaS core endpoints locally

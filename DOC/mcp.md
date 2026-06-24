@@ -1,5 +1,7 @@
 # PrismRAG MCP Server
 
+> **Note (2026):** MCP server ships with **legacy SaaS** in `prismrag/mcp/`. For library users, integrate `PrismRAG.search()` in your agent directly. Product overview: [INFO.md](../INFO.md).
+
 ## What is MCP?
 
 Model Context Protocol (MCP) is an open standard that lets AI agents (Claude, GPT, LangChain, AutoGen, and others) call external services as tools using a structured interface.

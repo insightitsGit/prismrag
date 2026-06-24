@@ -1,5 +1,8 @@
 # Logging, Blob Storage, and Cost Reduction
 
+> **Note (2026):** Azure Container Apps hosting was retired. This doc applies if you **self-host** the legacy SaaS in `prismrag/` or run your own workers.  
+> For the pip library, logging is standard Python — no Azure Log Analytics required. See [INFO.md](../INFO.md).
+
 PrismRAG can log in three tiers — use **email for urgent issues** and **Azure Blob for file archives**, instead of paying Log Analytics to ingest every console line.
 
 | Method | Cost | Best for |

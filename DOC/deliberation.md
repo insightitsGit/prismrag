@@ -1,5 +1,7 @@
 # PrismRAG Deliberation — Multi-Domain Expert Synthesis
 
+> **Note (2026):** Deliberation was a **hosted SaaS feature** (Azure retired). Code remains in `prismrag/` for self-host. Primary product: pip library — [INFO.md](../INFO.md).
+
 ## What it does
 
 Deliberation answers complex questions that no single domain can fully address by running a structured three-phase pipeline:

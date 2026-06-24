@@ -1,5 +1,7 @@
 # Embedding Strategy — PrismRAG
 
+> **Applies to:** pip library and legacy SaaS. Bring your own `embed_fn` in the library — see [INFO.md](../INFO.md).
+
 ## Why we don't depend on Google or OpenAI for embeddings
 
 PrismRAG and prismrag-patch are designed to be embedding-model agnostic.

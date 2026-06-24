@@ -1,5 +1,7 @@
 # Production QA — PrismRAG API
 
+> **Note (2026):** Hosted API QA below is **archived** (Azure SaaS retired). For library QA run `pytest tests/test_lib_*.py`. See [INFO.md](../INFO.md).
+
 End-to-end validation of the published API at **https://prismrag.insightits.com** using three seeded domains (healthcare, pharmacy, finance), simulated user table data, and a dedicated Azure Postgres test account.
 
 ## What gets seeded

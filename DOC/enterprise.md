@@ -1,5 +1,7 @@
 ﻿# PrismRAG — Enterprise Readiness (v1.2)
 
+> **Note (2026):** Primary product is the pip library — see [INFO.md](../INFO.md). This doc covers **legacy SaaS** enterprise features in `prismrag/` (self-host reference).
+
 ## Implemented
 
 | Capability | Status |

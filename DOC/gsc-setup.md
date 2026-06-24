@@ -1,36 +1,24 @@
 # Google Search Console — Setup Checklist
 
-After the `[publish]` deploy, complete these steps in [Google Search Console](https://search.google.com/search-console).
+PrismRAG is now primarily a **pip library** (`prismrag-patch`). The static site at `prismrag.insightits.com` should emphasize PyPI install and [prismrag-lib.html](https://prismrag.insightits.com/prismrag-lib.html).
+
+Product copy source: [INFO.md](../INFO.md).
+
+---
 
 ## 1. Add property
 
-Choose **URL prefix** (fastest):
+**URL prefix:**
 
 ```
 https://prismrag.insightits.com
 ```
 
-Or add **Domain** property for `insightits.com` if you want all subdomains covered (requires DNS TXT verification).
-
 ## 2. Verify ownership
 
-**Option A — DNS (recommended for domain property)**
-
-Add a TXT record at your DNS host (AWS Route 53 / Azure DNS):
-
-```
-Name:  @  (or insightits.com)
-Type:  TXT
-Value: google-site-verification=XXXXXXXX  (from GSC)
-```
-
-**Option B — HTML file (URL prefix)**
-
-Download the verification file from GSC and place it in `web/` — it will be served at the site root after deploy.
+DNS TXT or HTML file — see GSC instructions.
 
 ## 3. Submit sitemap
-
-In GSC → **Sitemaps** → enter:
 
 ```
 sitemap.xml
@@ -38,37 +26,37 @@ sitemap.xml
 
 Full URL: `https://prismrag.insightits.com/sitemap.xml`
 
-## 4. Request indexing (optional, speeds first crawl)
-
-GSC → **URL Inspection** → paste each high-priority URL → **Request indexing**:
+## 4. Request indexing (priority URLs)
 
 - `https://prismrag.insightits.com/`
-- `https://prismrag.insightits.com/whitepaper.html`
 - `https://prismrag.insightits.com/prismrag-lib.html`
+- `https://prismrag.insightits.com/whitepaper.html`
 
-## 5. Verify rich results
+## 5. Target keywords (2026 pivot)
 
-Use [Rich Results Test](https://search.google.com/test/rich-results) on:
+Focus on **library + open source**, not SaaS signup:
 
-- `/` — expect `SoftwareApplication`, `FAQPage`, `Organization`
-- `/whitepaper.html` — expect `TechArticle`
+- `prismrag-patch pip install`
+- `RAG category bleed`
+- `taxonomy grounded RAG python`
+- `graph RAG client defined mapping`
+- `pgvector category projection`
 
-## 6. PyPI (separate from GSC)
+## 6. Structured data
 
-After republishing `prismrag-patch` to PyPI, Google will pick up the Homepage link on:
+Ensure `SoftwareApplication` schema lists:
 
-```
-https://pypi.org/project/prismrag-patch/
-```
+- `downloadUrl`: https://pypi.org/project/prismrag-patch/
+- `offers`: Free / Apache-2.0 (not SaaS tiers)
 
-Republish command (from repo root, with PyPI token configured):
+Update `web/index.html` schema when copy changes.
 
-```powershell
-cd prismrag_patch
-python -m build
-python -m twine upload dist/*
-```
+## 7. PyPI backlink
+
+PyPI project should link to GitHub and https://prismrag.insightits.com/prismrag-lib.html
 
 ---
 
-*Canonical domain: `https://prismrag.insightits.com`*
+## Note on hosted API
+
+SaaS API endpoints are retired. Do not index `/register.html`, `/playground.html` as primary conversion paths unless you restore hosting. Library docs and whitepaper remain valid.

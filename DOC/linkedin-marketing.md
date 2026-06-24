@@ -1,7 +1,9 @@
 # PrismRAG — LinkedIn Marketing Content
 
+> **Pivot (2026):** Lead with **free pip library** (`prismrag-patch`, Apache-2.0). Hosted SaaS signup CTAs are retired. Canonical copy: [INFO.md](../INFO.md).
+
 Use this document for LinkedIn articles, feed posts, and carousel campaigns.  
-**Product URL:** https://prismrag.insightits.com
+**Product URL:** https://prismrag.insightits.com/prismrag-lib.html
 
 ---
 

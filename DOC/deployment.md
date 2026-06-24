@@ -1,145 +1,123 @@
 # PrismRAG — Deployment Guide
 
-## Prerequisites
+> **Primary deployment (2026):** `pip install prismrag-patch` — no Azure required.  
+> See [INFO.md](../INFO.md) and [pypi-publish.md](pypi-publish.md).
 
-- Azure CLI (`az`) logged in
-- Docker Desktop running
-- Azure subscription with Contributor role on the resource group
+---
 
-## Phase 1 — Local / Neon (Day 1, ~$12/mo)
-
-### 1. Neon database
-
-1. Sign up at [console.neon.tech](https://console.neon.tech)
-2. Create project `prismrag`, database `prismrag`
-3. Enable pgvector: **Extensions → Add → vector**
-4. Copy the connection string
-
-### 2. Run the schema
+## Option 1: Local / notebook (fastest)
 
 ```bash
-psql "postgresql://user:pass@ep-xyz.neon.tech/prismrag?sslmode=require" \
-  -f prismrag/schema.sql \
-  -f prismrag/auth_schema.sql \
-  -f prismrag/audit_schema.sql
+pip install "prismrag-patch[graph]"
 ```
 
-### 3. Environment
+```python
+from prismrag_patch import PrismRAG
+
+rag = PrismRAG(mapping=your_mapping, tenant_id="dev")
+rag.ingest(records=[...])
+print(rag.search("your query", top_k=5))
+```
+
+Uses **MemoryStore** — nothing to deploy. Ideal for prototypes and CI tests.
+
+---
+
+## Option 2: Your PostgreSQL (production)
+
+1. **Provision Postgres** with [pgvector](https://github.com/pgvector/pgvector) extension.
+2. **Apply schema:**
+   ```bash
+   psql $DATABASE_URL -f prismrag/schema.sql
+   ```
+3. **Install library:**
+   ```bash
+   pip install "prismrag-patch[graph,pgvector]"
+   ```
+4. **Run client:**
+   ```python
+   from prismrag_patch import PrismRAG
+
+   rag = PrismRAG.from_postgres(
+       dsn=os.environ["PRISMRAG_DB_DSN"],
+       mapping=mapping,
+       tenant_id=tenant_uuid,
+   )
+   rag.ingest(records=[...])
+   ```
+
+PostgresStore writes to the same `prismrag.*` tables the former SaaS API used.
+
+---
+
+## Option 3: Existing vector database (remap only)
+
+If you already have chunks in pgvector, Chroma, Pinecone, or Weaviate:
 
 ```bash
-cp .env.example .env
-# Edit .env with your actual values
+pip install "prismrag-patch[pgvector]"   # or chroma / pinecone / weaviate
 ```
 
-Required for local dev:
-```
-PRISMRAG_DB_DSN=postgresql://...neon.tech/prismrag?sslmode=require
-JWT_SECRET=<64 random chars>
-GEMINI_API_KEY=AIza...
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+```python
+from prismrag_patch import PrismRAGPatch
+from prismrag_patch.adapters.pgvector import PgvectorAdapter
+
+patch = PrismRAGPatch(mapping=mapping)  # no license key
+adapter = PgvectorAdapter(patch, conn, table="my_chunks")
+adapter.insert(text, your_embed_fn(text))
+results = adapter.search(query_text, query_vector, top_k=5)
 ```
 
-### 4. Run locally
+This applies **Tier-1 category projection** on insert/search. For full Graph RAG (communities, bridges), use Option 1 or 2.
+
+---
+
+## Option 4: Self-host legacy SaaS API (advanced)
+
+The FastAPI app in `prismrag/` + Dockerfiles can still be self-hosted if you need REST, auth, billing, and MCP. This path is **not maintained as the primary product** and Azure templates are archived.
+
+Historical reference: [deploy.yml.archived](../.github/workflows/deploy.yml.archived), `infra/deploy.sh`.
+
+---
+
+## CI / PyPI publish
+
+- **Tests:** `.github/workflows/ci.yml`
+- **Publish:** tag `v*` → `.github/workflows/publish-pypi.yml` (requires `PYPI_API_TOKEN` secret)
 
 ```bash
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8001
-# Open http://localhost:8001
-```
-
-### 5. Stripe webhook (local)
-
-```bash
-stripe listen --forward-to localhost:8001/api/billing/webhook
+git tag v0.2.1 && git push origin v0.2.1
 ```
 
 ---
 
-## Phase 1 — Azure Container Apps (still using Neon)
+## Azure SaaS (retired)
 
-### 1. Create resource group and ACR
-
-```bash
-az group create -n prismrag-rg -l eastus2
-az acr create -n prismrag -g prismrag-rg --sku Basic --admin-enabled true
-az acr login -n prismrag
-```
-
-### 2. Deploy
-
-```bash
-# Copy params template
-cp infra/params.example.json infra/params.json
-# Edit infra/params.json:
-#   externalDb = true
-#   externalDbDsn = your Neon DSN
-#   deployRedis = false
-
-./infra/deploy.sh v0.1.0
-```
-
-This builds and pushes both Docker images then deploys Container Apps via Bicep.
+Hosted API at `prismrag.insightits.com` was shut down. Resource group `prismrag-rg` deleted — see [azure-teardown.md](azure-teardown.md).
 
 ---
 
-## Phase 2 — Azure Postgres Burstable (~$80/mo)
+## Environment variables (library)
 
-When Neon free tier is full (>0.5 GB) or you need consistent latency:
+| Variable | Used when |
+|----------|-----------|
+| `PRISMRAG_DB_DSN` | PostgresStore / integration tests |
+| `GEMINI_API_KEY` | Optional; only if you wire Gemini embed_fn in app code |
 
-```bash
-# In infra/params.json:
-#   externalDb = false
-#   postgresSku = Standard_B2s
-
-./infra/deploy.sh v0.2.0
-
-# Enable pgvector on the new Azure Postgres server
-az postgres flexible-server parameter set \
-  -g prismrag-rg -s prismrag-pg \
-  -n azure.extensions --value vector
-
-# Migrate data from Neon (takes seconds for small DBs)
-pg_dump "postgresql://neon-dsn..." | psql "postgresql://azure-dsn..."
-```
+The library does **not** require cloud secrets for core operation.
 
 ---
 
-## Phase 3 — Full production (~$250+/mo)
+## Health checks
+
+Library smoke test:
 
 ```bash
-# In infra/params.json:
-#   postgresSku = Standard_D4s_v3   (zone-redundant HA)
-#   deployRedis = true
-
-./infra/deploy.sh v1.0.0
+pytest tests/test_lib_step01_mapping.py tests/test_lib_step02_ingest.py -q
 ```
 
----
-
-## Cleanup cron job
-
-Set up nightly cleanup as a Container Apps scheduled job:
+Postgres integration (optional):
 
 ```bash
-az containerapp job create \
-  --name prismrag-cleanup \
-  --resource-group prismrag-rg \
-  --environment prismrag-env \
-  --trigger-type Schedule \
-  --cron-expression "0 2 * * *" \
-  --image prismrag.azurecr.io/prismrag-api:latest \
-  --command "python" "-m" "prismrag.worker.cleanup" \
-  --cpu 0.25 --memory 0.5Gi
-```
-
-## MCP server (optional add-on)
-
-```bash
-# Run alongside the API (separate process or container)
-python -m prismrag.mcp.server
-
-# Or add to docker-compose for local dev:
-# See DOC/mcp.md
+PRISMRAG_DB_DSN=postgresql://... python scripts/run_postgres_lib_tests.py
 ```

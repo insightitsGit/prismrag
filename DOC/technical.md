@@ -1,5 +1,8 @@
 # PrismRAG — Technical Reference
 
+> **Product (2026):** pip library `prismrag-patch` — see [INFO.md](../INFO.md).  
+> **Legacy SaaS API** code remains in `prismrag/` for reference; not deployed on Azure.
+
 ## Vector spaces
 
 PrismRAG maintains two vector spaces per chunk:

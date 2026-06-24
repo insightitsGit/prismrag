@@ -1,5 +1,7 @@
 ﻿# Azure Email for prismrag@insightits.com (domain DNS in AWS)
 
+> **Note (2026):** Azure SaaS hosting was retired. Email/DNS setup remains valid for support contact and static site. Product: [INFO.md](../INFO.md).
+
 Yes — **your domain can stay in AWS Route 53** while email sends from **Azure Communication Services (ACS)**. DNS is just records; they can point anywhere.
 
 ## Architecture

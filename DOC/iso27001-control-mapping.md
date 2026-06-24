@@ -1,5 +1,7 @@
 # PrismRAG — ISO/IEC 27001:2022 Control Mapping
 
+> **Note (2026):** Maps **legacy hosted SaaS** features. For pip-only deployments, map controls to your Postgres / cloud environment. See [INFO.md](../INFO.md).
+
 This checklist maps **ISO 27001 Annex A controls** to **PrismRAG product features and operational evidence**. Use it for gap analysis before Stage 1 / Stage 2 audits.
 
 **Legend**
