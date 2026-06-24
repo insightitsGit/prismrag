@@ -44,7 +44,7 @@
       { "@type": "ContactPoint", "email": "prismrag@insightits.com", "contactType": "sales" }
     ],
     "sameAs": [
-      "https://github.com/aminparva84/InsightPrismRAG",
+      "https://github.com/insightitsGit/prismrag",
       "https://pypi.org/project/prismrag-patch/",
       "https://insightits.com"
     ]
@@ -75,7 +75,7 @@
     "url": "https://prismrag.insightits.com/prismrag-lib.html",
     "downloadUrl": "https://pypi.org/project/prismrag-patch/",
     "installUrl": "https://pypi.org/project/prismrag-patch/",
-    "softwareHelp": "https://github.com/aminparva84/InsightPrismRAG/blob/main/INFO.md",
+    "softwareHelp": "https://github.com/insightitsGit/prismrag/blob/main/INFO.md",
     "license": "https://www.apache.org/licenses/LICENSE-2.0",
     "description": "Free Apache-2.0 Python library. Stops RAG category bleed by enforcing client-defined taxonomy via Tier-1 deterministic category projection. Full ingest, graph RAG search, communities, bridges, and PostgresStore — pip install, no license key.",
     "offers": [
@@ -289,10 +289,11 @@
     </a>
     <ul class="nav-links">
       <li><a href="#products">Products</a></li>
+      <li><a href="#use-cases">Use cases</a></li>
       <li><a href="/prismrag-lib.html">Library</a></li>
       <li><a href="#pricing">Get started</a></li>
       <li><a href="/whitepaper.html">Whitepaper</a></li>
-      <li><a href="https://github.com/aminparva84/InsightPrismRAG" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/insightitsGit/prismrag" target="_blank" rel="noopener">GitHub</a></li>
     </ul>
     <div class="nav-cta">
       <a href="/prismrag-lib.html" class="btn-ghost">Docs</a>
@@ -304,6 +305,7 @@
   </div>
   <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
     <a href="#products">Products</a>
+    <a href="#use-cases">Use cases</a>
     <a href="/prismrag-lib.html">Library</a>
     <a href="#how-it-works">How it works</a>
     <a href="#pricing">Get started</a>
@@ -588,16 +590,16 @@ results = rag.search(<span class="c-str">"compliance exposure"</span>, top_k=5)<
         <div class="step-number">01</div>
         <div class="step-icon">⬡</div>
         <h3>Define your mapping</h3>
-        <p>Send a category table and word→group rules via API, CSV, SQL query, or Excel file. This is your domain model — explicit, versioned, and auditable.</p>
-        <div class="step-tag">Tier 1 · Rules</div>
+        <p>Pass a category table and word→group rules as a Python dict, JSON, CSV, or Postgres rows. Your domain model — explicit, versioned, and auditable. No hosted API required.</p>
+        <div class="step-tag">Tier 1 · Rules · pip install</div>
       </div>
       <div class="step-connector">→</div>
       <div class="step-card">
         <div class="step-number">02</div>
         <div class="step-icon">◈</div>
-        <h3>We re-map the space</h3>
-        <p>Your rules train a personal MLP (Tier 2) that learns the boundaries of your categories and generalises them to unseen vocabulary. All source text is projected through your model.</p>
-        <div class="step-tag">Tier 2 · MLP Training</div>
+        <h3>Project into your space</h3>
+        <p>Every chunk gets dual vectors: 768-d semantic + 256-d category-grounded personal projection. Deterministic Tier-1 rules — same mapping always produces the same placement.</p>
+        <div class="step-tag">Tier 1 · Projection</div>
       </div>
       <div class="step-connector">→</div>
       <div class="step-card">
@@ -607,6 +609,53 @@ results = rag.search(<span class="c-str">"compliance exposure"</span>, top_k=5)<
         <p>Queries traverse your community graph, not a statistical one. Graph RAG finds what you defined as related — not what happened to co-occur in training data.</p>
         <div class="step-tag">Graph RAG · HNSW</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── USE CASES (pip library) ───────────────────────────────────────────── -->
+<section class="how-section" id="use-cases" style="padding:80px 0;background:#07070f;">
+  <div class="container">
+    <div class="section-label">Use cases</div>
+    <h2 class="section-h2">Built for teams that own their taxonomy</h2>
+    <p class="section-sub">Free Apache-2.0 library — define your mapping once; run ingest, graph RAG, and search on your infrastructure.</p>
+
+    <div class="use-case-grid">
+      <div class="use-case-card">
+        <div class="uc-icon">🏥</div>
+        <h4>Healthcare &amp; clinical RAG</h4>
+        <p>Map diagnosis, medication, lab results, and patient safety. Stop symptom chunks appearing in medication queries — every retrieval traces to your clinical rules.</p>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">📊</div>
+        <h4>Finance &amp; risk compliance</h4>
+        <p>Enforce risk vs valuation vs liquidity categories. VaR and volatility stay in risk even when embeddings blur across domains. Audit-ready for regulators.</p>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">💊</div>
+        <h4>Pharmacy &amp; life sciences</h4>
+        <p>Isolate drug interactions, pharmacokinetics, storage, and contraindications. Agents get verified category-placed context, not statistical co-occurrence noise.</p>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">🏢</div>
+        <h4>Enterprise knowledge bases</h4>
+        <p>Each business unit supplies a mapping JSON — same document export, different graphs per unit. Ideal for consultancies and multi-tenant internal search.</p>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">🤖</div>
+        <h4>AI agents &amp; production RAG</h4>
+        <p><code>pip install prismrag-patch</code> in your app, Postgres for production, or pgvector/Chroma/Pinecone adapters. Bring your own embedding model.</p>
+      </div>
+      <div class="use-case-card">
+        <div class="uc-icon">⚖️</div>
+        <h4>Regulated &amp; high-stakes AI</h4>
+        <p>Legal, insurance, government: hard <code>category_filter</code> at retrieval, quality scoring per chunk, full export — data stays in your environment.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;text-align:center;">
+      <a href="https://github.com/insightitsGit/prismrag" class="btn-hero-ghost" style="display:inline-flex;margin-right:12px;" target="_blank" rel="noopener">View on GitHub ↗</a>
+      <a href="https://pypi.org/project/prismrag-patch/" class="btn-hero-primary" style="display:inline-flex;" target="_blank" rel="noopener">pip install prismrag-patch</a>
     </div>
   </div>
 </section>
@@ -1067,7 +1116,7 @@ results = adapter.search(<span style="color:#2dd4bf;">"insulin medication"</span
           <li><a href="https://pypi.org/project/prismrag-patch/" target="_blank" rel="noopener">prismrag-patch on PyPI</a></li>
           <li><a href="/prismrag-lib.html">Python Library</a></li>
           <li><a href="/docs#mcp">MCP Setup</a></li>
-          <li><a href="https://github.com/aminparva84/InsightPrismRAG" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/insightitsGit/prismrag" target="_blank" rel="noopener">GitHub</a></li>
         </ul>
       </div>
       <div class="footer-col">

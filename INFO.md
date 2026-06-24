@@ -1,24 +1,52 @@
 # PrismRAG — Product Information (Landing Page Source)
 
 > **Use this file** as the canonical source for website copy, sales one-pagers, and README summaries.  
-> **Product form:** Free Apache-2.0 Python library on PyPI (`prismrag-patch`).  
-> **Legacy:** SaaS API on Azure was retired (zero hosting cost). Code remains in `prismrag/` for reference and self-host.
+> **Product:** Free Apache-2.0 Python library on PyPI — [`prismrag-patch` **0.2.1**](https://pypi.org/project/prismrag-patch/0.2.1/) (**published**, no license key).  
+> **Legacy:** Azure SaaS API retired. Code in `prismrag/` for self-host reference only.  
+> **Last benchmark:** 2026-06-24 — [examples/demo_app](examples/demo_app) vs PyPI install (see below).
 
 ---
 
 ## One-line pitch
 
-**PrismRAG stops RAG category bleed** by enforcing *your* taxonomy in vector space — deterministic category projection, graph RAG on your rules, fully auditable, pip-installable, no license key.
+**PrismRAG stops RAG category bleed** — you define your mapping (categories + word→category rules); the library ingests, builds a graph on *your* taxonomy, and runs Graph RAG search with a full audit trail. **`pip install prismrag-patch`**. Free. No hosted API required.
 
 ---
 
 ## Elevator pitch (30 seconds)
 
-Standard Graph RAG learns relationships from document co-occurrence — so two companies with the same PDFs get the same graph. PrismRAG reverses that: **you define categories and word→category rules first**, then every chunk is embedded into *your* personal vector space. Retrieval runs Graph RAG (communities → word graph → semantic re-rank) on a graph **you own**, not Wikipedia’s statistics.
+Standard Graph RAG learns relationships from document co-occurrence — two companies with the same PDFs get the same graph. **PrismRAG inverts that:** you supply a **mapping table** (categories + rules), and every chunk is embedded into *your* personal vector space. Retrieval uses Graph RAG (communities → word graph → re-rank) on a graph **you own**.
 
-Ship it with **`pip install prismrag-patch`**. Run in-memory for prototypes, against **your Postgres** (`PostgresStore`), or drop Tier-1 remap into **pgvector / Chroma / Pinecone / Weaviate** via adapters. No SaaS subscription. No data leaves your environment unless you choose.
+Ship with **`pip install prismrag-patch`**. Prototype in-memory, run production on **Postgres** (`PostgresStore` + `prismrag.*` tables), or add Tier-1 remap to **pgvector / Chroma / Pinecone / Weaviate**. Your data stays in your environment.
 
 ---
+
+## Your mapping drives everything
+
+Users define taxonomy once; the library executes on it:
+
+```python
+mapping = {
+    "categories": [
+        {"slug": "medication",  "label": "Medication"},
+        {"slug": "lab_results", "label": "Lab Results"},
+    ],
+    "rules": [
+        {"word": "metformin", "category_slug": "medication"},
+        {"word": "troponin",  "category_slug": "lab_results"},
+    ],
+}
+rag = PrismRAG(mapping=mapping, tenant_id="your-tenant")
+```
+
+| Source | How |
+|--------|-----|
+| Python dict / JSON file | Pass `mapping=` to `PrismRAG` or `PrismRAGPatch` |
+| CSV / Excel / your SQL table | Load rows → build `categories` + `rules` → pass `mapping=` |
+| Postgres production | `prismrag.mapping_category` + `prismrag.mapping_rule` via `PostgresStore` |
+| Live updates | `append_chunks(..., new_rules=[...])` without full retrain |
+
+Every ingest, projection, graph edge, and search result traces back to **your** rules — not Wikipedia co-occurrence.
 
 ## What it does
 
@@ -155,6 +183,78 @@ Apply schema once: `prismrag/schema.sql` (pgvector extension required).
 8. **Tenant + mapping isolation** — multi-workspace via `tenant_id` + `mapping_id`  
 9. **Vector DB adapters** — pgvector, ChromaDB, Pinecone, Weaviate  
 10. **Step-by-step test suite** — `tests/test_lib_step*.py` parity harness  
+11. **Reference demo + benchmarks** — `examples/demo_app` installs from PyPI, logs every event, 13 integration tests  
+
+---
+
+## Verified benchmark (PyPI 0.2.1)
+
+Reproducible reference run: **`examples/demo_app/run_verification.py`**  
+Install source: **PyPI** (`prismrag-patch==0.2.1`), not editable local code.  
+Environment: Python 3.12.10, Windows, `MemoryStore`, deterministic embeddings (offline).
+
+### Run summary
+
+| Metric | Result |
+|--------|--------|
+| **Overall** | PASS (exit 0) |
+| **Demo pipeline** | 0.29 s |
+| **Integration tests** | **13 / 13 passed** in 0.29 s |
+| **Total verification** | ~0.8 s |
+| **Package** | `prismrag-patch` 0.2.1 from PyPI |
+
+### Demo workload (healthcare mini-mapping)
+
+| Setting | Value |
+|---------|-------|
+| Categories | 3 (`medication`, `lab_results`, `symptoms`) |
+| Mapping rules | 6 words |
+| Store | In-memory |
+| Tier-1 alpha | 0.35 |
+
+### Pipeline events (from event log)
+
+| Step | Metric | Value |
+|------|--------|-------|
+| **Ingest** | Records written | 6 |
+| | Communities (Louvain) | 3 |
+| | Graph edges | 3 |
+| | Job status | `completed` |
+| **Search** | Query | *"What medications are used for diabetes management?"* |
+| | Retrieval mode | `graph_rag` |
+| | Hits (top_k=3) | 3 |
+| | Top categories | `lab_results` (hba1c), `medication` (metformin, insulin) |
+| **Communities** | Clusters | meds · labs · symptoms (2 words each) |
+| **Bridge** | Created | bridge_id 1 (medication ↔ lab_results) |
+| **Append** | New chunk | `nausea` → symptoms, quality **1.0** |
+| **Quality** | Total chunks | 7 (6 ingest + 1 append) |
+| | Avg quality | **0.73** |
+| | Flagged | **0** |
+| | Avg confidence | 0.79 |
+| **Export** | Chunks exported | 7 (256-d personal + 768-d semantic each) |
+
+### Integration test coverage (13 tests)
+
+| Area | Tests | Status |
+|------|-------|--------|
+| Package import, no license key | 2 | PASS |
+| Ingest, dual vectors, communities | 3 | PASS |
+| Graph RAG search, category filter, top_k, latency &lt; 3 s | 5 | PASS |
+| Append + quality report | 2 | PASS |
+| Bridge creation | 1 | PASS |
+
+### Reproduce
+
+```powershell
+cd examples/demo_app
+python -m venv .venv
+.\.venv\Scripts\pip install -r requirements.txt
+python run_verification.py
+```
+
+Event log written to `examples/demo_app/logs/run_<timestamp>.log` (structured `EVENT name | {json}` per step).
+
+Reference log from benchmark run: `examples/demo_app/logs/run_20260624_174725.log`
 
 ---
 
@@ -212,14 +312,21 @@ PrismRAG is a **taxonomy-grounded retrieval engine**, not a general orchestratio
 **Can I use only the vector remap (Tier-1 patch)?**  
 Yes. `PrismRAGPatch` + adapters remap vectors on insert/search without full graph pipeline.
 
+**Can I use my own mapping table?**  
+Yes. Load your categories and word→category rows into the `mapping` dict (or Postgres `mapping_category` / `mapping_rule` tables). The library does not invent categories — it executes on what you define.
+
+**Is the package verified on PyPI?**  
+Yes. See **Verified benchmark** above — 13/13 integration tests against `prismrag-patch==0.2.1` installed from PyPI.
+
 ---
 
 ## Links
 
 | Resource | URL |
 |----------|-----|
-| PyPI | https://pypi.org/project/prismrag-patch/ |
-| GitHub | https://github.com/aminparva84/InsightPrismRAG |
+| PyPI (0.2.1) | https://pypi.org/project/prismrag-patch/0.2.1/ |
+| GitHub | https://github.com/insightitsGit/prismrag |
+| Demo app + benchmark | [examples/demo_app](examples/demo_app) |
 | Library docs page | https://prismrag.insightits.com/prismrag-lib.html |
 | Whitepaper | https://prismrag.insightits.com/whitepaper.html |
 | Package README | [prismrag_patch/README.md](prismrag_patch/README.md) |
@@ -232,18 +339,21 @@ Yes. `PrismRAGPatch` + adapters remap vectors on insert/search without full grap
 
 | Path | Role |
 |------|------|
-| `prismrag_patch/` | **Ship this** — PyPI package |
-| `prismrag/` | Legacy SaaS API (FastAPI, worker, billing) — reference / self-host |
+| `prismrag_patch/` | **Ship this** — PyPI package (0.2.1 live) |
+| `examples/demo_app/` | **Benchmark** — PyPI install, demo, 13 tests, event logs |
+| `prismrag/` | Legacy SaaS API — reference / self-host |
 | `web/` | Static marketing site |
-| `tests/test_lib_*.py` | Library parity + evaluation tests |
+| `tests/test_lib_*.py` | Library parity + evaluation tests (CI) |
 | `prismrag/schema.sql` | Postgres schema for PostgresStore |
 
 ---
 
 ## Version
 
-Current library version: **0.2.1** (see `prismrag_patch/pyproject.toml`).
-
----
+| Item | Value |
+|------|-------|
+| **PyPI release** | **0.2.1** — published (local `twine`, 2026-06-17) |
+| **Source of truth** | `prismrag_patch/pyproject.toml` |
+| **Next release** | Bump version → build → `twine upload` (only when library code changes) |
 
 © 2026 Insight IT Solutions · Apache-2.0
