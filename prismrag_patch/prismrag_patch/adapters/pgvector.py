@@ -21,7 +21,7 @@ class PgvectorAdapter:
     Parameters
     ----------
     patch : PrismRAGPatch
-        Initialized PrismRAGPatch instance (validates license on init).
+        Initialized PrismRAGPatch instance (no license required in OSS build).
     connection :
         A psycopg2 connection (or compatible) object.
     table : str

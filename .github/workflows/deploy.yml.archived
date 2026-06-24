@@ -1,0 +1,11 @@
+# Azure SaaS deploy — ARCHIVED
+
+This workflow deployed the PrismRAG **SaaS API** to Azure Container Apps (~$150–225/mo).
+
+The project has pivoted to a **pip-only OSS library** (`prismrag-patch`). Azure resources in `prismrag-rg`
+were removed for zero cost. Use:
+
+- **CI:** `.github/workflows/ci.yml` — library tests + build
+- **PyPI:** `.github/workflows/publish-pypi.yml` — publish on `v*` tag
+
+To restore SaaS deploy, rename this file back to `deploy.yml` and recreate Azure infra via `infra/deploy.sh`.

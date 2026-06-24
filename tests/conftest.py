@@ -26,6 +26,8 @@ import requests
 
 from tests.helpers import login as _login
 
+pytest_plugins = ["tests.fixtures.lib_conftest"]
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 def pytest_addoption(parser):

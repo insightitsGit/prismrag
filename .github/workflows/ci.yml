@@ -1,0 +1,65 @@
+name: CI — prismrag-patch library
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prismrag_patch/**'
+      - 'tests/test_lib_*.py'
+      - 'tests/fixtures/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'prismrag_patch/**'
+      - 'tests/test_lib_*.py'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test library
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install package + test deps
+        run: |
+          pip install -e "prismrag_patch/[graph]" pytest --quiet
+          pip install -r requirements-test.txt --quiet 2>/dev/null || true
+
+      - name: Run library parity tests
+        run: |
+          pytest tests/test_lib_step01_mapping.py \
+                 tests/test_lib_step02_ingest.py \
+                 tests/test_lib_step03_graph.py \
+                 tests/test_lib_step04_search.py \
+                 tests/test_lib_step05_bridge_append.py \
+                 tests/test_lib_step06_evaluation.py \
+                 -v --tb=short
+
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build package
+        run: |
+          pip install build --quiet
+          cd prismrag_patch && python -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prismrag-patch-dist
+          path: prismrag_patch/dist/*
+          retention-days: 14

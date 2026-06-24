@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prismrag-patch"
-version = "0.1.2"
-description = "Drop-in hallucination-resistant retrieval for pgvector, ChromaDB, Pinecone, and Weaviate"
+version = "0.2.1"
+description = "Free OSS RAG library — ingest, graph RAG search, communities, bridges, append (API parity)"
 readme = "README.md"
-license = { text = "Commercial" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Insight IT Solutions", email = "prismrag@insightits.com" }]
 requires-python = ">=3.9"
-keywords = ["rag", "vector-database", "hallucination", "pgvector", "chromadb", "pinecone", "weaviate", "llm"]
+keywords = ["rag", "vector-database", "graph-rag", "pgvector", "chromadb", "pinecone", "weaviate", "llm", "open-source"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -23,16 +24,19 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "requests>=2.28",
     "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
+graph = ["networkx>=3.0", "python-louvain>=0.16"]
+torch = ["torch>=2.0"]
 pgvector = ["psycopg2-binary>=2.9", "pgvector>=0.2"]
 chroma   = ["chromadb>=0.4"]
 pinecone = ["pinecone-client>=3.0"]
 weaviate = ["weaviate-client>=4.0"]
 all      = [
+    "networkx>=3.0", "python-louvain>=0.16",
+    "torch>=2.0",
     "psycopg2-binary>=2.9", "pgvector>=0.2",
     "chromadb>=0.4",
     "pinecone-client>=3.0",
@@ -50,3 +54,10 @@ Repository    = "https://github.com/aminparva84/InsightPrismRAG"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["prismrag_patch*"]
+
+[tool.setuptools.package-data]
+prismrag_patch = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["../tests"]
+pythonpath = ["."]
