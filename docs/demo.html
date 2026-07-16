@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PrismRAG — Live Taxonomy Demo</title>
+  <meta name="description" content="Interactive demo: taxonomy mapping → rule edges → Graph RAG retrieve. You don't need a separate Graph RAG stack." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --grid: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --mint: #7ee787;
+      --accent: #58a6ff;
+      --amber: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 24px 24px;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 3rem;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    h1 { font-size: 1.7rem; font-weight: 700; margin-bottom: 0.35rem; line-height: 1.25; }
+    .sub { color: var(--green); font-family: "JetBrains Mono", monospace; font-size: 0.92rem; margin-bottom: 1.35rem; }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 560px) { .compare { grid-template-columns: 1fr; } }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      background: #010409;
+    }
+    .card.bad { border-color: #f8514966; }
+    .card.good { border-color: #3fb95066; }
+    .card h3 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.45rem; }
+    .card.bad h3 { color: var(--red); }
+    .card.good h3 { color: var(--green); }
+    .card p { font-size: 0.82rem; color: var(--muted); line-height: 1.45; }
+    .card .mono { font-family: "JetBrains Mono", monospace; font-size: 0.78rem; color: var(--mint); line-height: 1.55; margin-top: 0.35rem; }
+    .terminal {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #010409;
+      margin-bottom: 1rem;
+    }
+    .term-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: #161b22;
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; }
+    .dot.y { background: #febc2e; }
+    .dot.g { background: #28c840; }
+    .term-title { margin-left: 8px; font-size: 0.75rem; color: var(--muted); }
+    .term-body {
+      padding: 1.25rem 1.25rem 1.5rem;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      min-height: 260px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .prompt { color: var(--accent); }
+    .out { color: var(--text); }
+    .ok { color: var(--green); font-weight: 600; }
+    .warn { color: var(--amber); }
+    .dim { color: var(--muted); }
+    .cursor { display: inline-block; width: 8px; height: 1.1em; background: var(--green); animation: blink 1s step-end infinite; vertical-align: text-bottom; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.85rem;
+    }
+    button {
+      font-family: Inter, sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #21262d;
+      color: var(--text);
+      cursor: pointer;
+    }
+    button:hover { background: #30363d; }
+    button.primary { background: var(--green); color: #0d1117; border-color: var(--green); }
+    button.primary:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .step-label { font-size: 0.8rem; color: var(--muted); margin-left: 0.25rem; }
+    .progress { display: flex; gap: 6px; margin-bottom: 1rem; }
+    .pip { flex: 1; height: 3px; border-radius: 2px; background: var(--border); transition: background 0.2s; }
+    .pip.on { background: var(--green); }
+    .try {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      background: #010409;
+      margin-bottom: 1rem;
+    }
+    .try h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.55rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .chips button { font-size: 0.78rem; padding: 0.4rem 0.7rem; }
+    .chips button.active { border-color: var(--green); color: var(--green); }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+    .cta-row a {
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.6rem 1.1rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .cta-row a.primary { background: var(--green); color: #0d1117; border-color: var(--green); }
+    .cta-row a:hover { filter: brightness(1.06); }
+    .caption { font-size: 0.82rem; color: var(--muted); margin-top: 0.35rem; min-height: 2.6em; line-height: 1.4; }
+    footer { margin-top: 2rem; font-size: 0.75rem; color: var(--muted); text-align: center; line-height: 1.5; }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>You don’t need a separate Graph RAG stack.</h1>
+    <p class="sub">Taxonomy mapping → rule edges → graph retrieve. Chunks stay separate.</p>
+
+    <div class="compare">
+      <div class="card bad">
+        <h3>Co-occurrence Graph RAG</h3>
+        <p>Same PDFs → same graph for every tenant. Connections are a corpus guess.</p>
+        <div class="mono dim">graph source: co-occurrence</div>
+      </div>
+      <div class="card good">
+        <h3>PrismRAG</h3>
+        <div class="mono">volatility + drawdown → risk<br />rule edge weight=1.0<br />mode: graph_rag · both chunks</div>
+      </div>
+    </div>
+
+    <div class="progress" id="progress"></div>
+
+    <div class="terminal">
+      <div class="term-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="term-title">prismrag — smoke · demo_taxonomy_connection.py</span>
+      </div>
+      <div class="term-body" id="screen"><span class="cursor"></span></div>
+    </div>
+
+    <p class="caption" id="caption"></p>
+
+    <div class="controls">
+      <button type="button" id="prev" disabled>← Back</button>
+      <button type="button" class="primary" id="next">Next step →</button>
+      <button type="button" id="play">▶ Play all</button>
+      <span class="step-label" id="stepLabel">Step 1 / 6</span>
+    </div>
+
+    <div class="try">
+      <h2>Try a query (precomputed from live smoke)</h2>
+      <div class="chips" id="chips">
+        <button type="button" data-q="risk">Risk metrics → both chunks</button>
+        <button type="button" data-q="growth">Growth filter → revenue only</button>
+        <button type="button" data-q="contrast">Split categories → no rule edge</button>
+        <button type="button" data-q="summary">SUMMARY takeaway</button>
+      </div>
+    </div>
+
+    <div class="cta-row">
+      <a class="primary" href="https://github.com/insightitsGit/prismrag/tree/main/examples/graph-rag-replacement">Run smoke on GitHub</a>
+      <a href="https://github.com/insightitsGit/prismrag/blob/main/docs/taxonomy-scorecard.md">Taxonomy Scorecard</a>
+      <a href="https://pypi.org/project/prismrag-patch/0.2.1/">pip · prismrag-patch</a>
+      <a href="https://github.com/insightitsGit/prismrag">Repo</a>
+    </div>
+
+    <footer>
+      Apache-2.0 · Captured from real <code>demo_taxonomy_connection.py</code> smoke ·
+      Reply <strong>TAXONOMY</strong> for an async mapping map ·
+      <a href="https://www.insightits.com/products/prismrag.html">insightits.com/products/prismrag</a>
+    </footer>
+  </div>
+
+  <script>
+    /* Real smoke lines — 2026-07-16 demo_taxonomy_connection.py */
+    const STEPS = [
+      {
+        caption: "Install PrismRAG — taxonomy Graph RAG in one pip. No separate Graph RAG product.",
+        lines: [
+          { t: "prompt", s: '$ pip install "prismrag-patch[graph]==0.2.1"' },
+          { t: "out", s: "Successfully installed prismrag-patch-0.2.1" },
+          { t: "dim", s: "" },
+          { t: "out", s: "PrismRAG - you don't need a separate Graph RAG stack" }
+        ]
+      },
+      {
+        caption: "You own the mapping. Same category (risk) will create the connection — not co-occurrence.",
+        lines: [
+          { t: "prompt", s: "$ python demo_taxonomy_connection.py" },
+          { t: "dim", s: "# mapping: volatility → risk · drawdown → risk · revenue → growth" },
+          { t: "out", s: "ingest status: completed" },
+          { t: "out", s: "records:       3" },
+          { t: "out", s: "edge_count:    1" },
+          { t: "dim", s: "" }
+        ]
+      },
+      {
+        caption: "Dual embeddings per chunk — personal 256-d (taxonomy) + semantic 768-d. No mega-chunk.",
+        lines: [
+          { t: "out", s: "1a) Dual embeddings (per chunk - not a mega-chunk)" },
+          { t: "ok", s: "volatility   category=risk     personal=256-d  semantic=768-d" },
+          { t: "ok", s: "drawdown     category=risk     personal=256-d  semantic=768-d" },
+          { t: "out", s: "revenue      category=growth   personal=256-d  semantic=768-d" },
+          { t: "dim", s: "" }
+        ]
+      },
+      {
+        caption: "Shared category → explicit rule edge. That is how PrismRAG connects base chunks.",
+        lines: [
+          { t: "out", s: "1b) Rule edges from shared category" },
+          { t: "ok", s: "volatility <-> drawdown  [rule]  weight=1.0" },
+          { t: "dim", s: "" },
+          { t: "out", s: "cos(personal, volatility<->drawdown) [same risk]  = 0.3576" },
+          { t: "out", s: "cos(personal, volatility<->revenue)  [cross cat]   = -0.0462" },
+          { t: "dim", s: "" }
+        ]
+      },
+      {
+        caption: "Graph RAG search returns BOTH connected risk chunks — still separate citations.",
+        lines: [
+          { t: "prompt", s: 'query: "What are the risk metrics for the portfolio?"' },
+          { t: "ok", s: "mode:   graph_rag" },
+          { t: "ok", s: "[1] volatility   cat=risk     Market volatility spiked in Q3…" },
+          { t: "ok", s: "[2] drawdown     cat=risk     Portfolio drawdown exceeded…" },
+          { t: "ok", s: "OK: both risk chunks retrieved via taxonomy graph" },
+          { t: "dim", s: "" }
+        ]
+      },
+      {
+        caption: "Takeaway: PrismRAG already is the Graph RAG layer. Soft CTA: reply TAXONOMY.",
+        lines: [
+          { t: "out", s: "SUMMARY" },
+          { t: "ok", s: "You do NOT need a separate Graph RAG library beside PrismRAG." },
+          { t: "out", s: "PrismRAG already does: rule edges + communities + graph retrieve." },
+          { t: "out", s: "YOUR taxonomy builds the graph — not co-occurrence guesswork." },
+          { t: "dim", s: "" },
+          { t: "out", s: "→ github.com/insightitsGit/prismrag/examples/graph-rag-replacement" }
+        ]
+      }
+    ];
+
+    const QUERIES = {
+      risk: {
+        caption: "Risk query — taxonomy graph retrieves both connected chunks.",
+        lines: [
+          { t: "prompt", s: 'rag.search("What are the risk metrics for the portfolio?")' },
+          { t: "ok", s: "mode: graph_rag" },
+          { t: "ok", s: "[1] volatility  cat=risk  community=0" },
+          { t: "ok", s: "[2] drawdown    cat=risk  community=0" },
+          { t: "ok", s: "OK: both risk chunks retrieved (chunks stay separate)" }
+        ]
+      },
+      growth: {
+        caption: "Category filter — growth only. Revenue hits; risk chunks stay out.",
+        lines: [
+          { t: "prompt", s: 'rag.search("performance numbers", category_filter="growth")' },
+          { t: "out", s: "mode: direct" },
+          { t: "ok", s: "[1] revenue  cat=growth  Q3 revenue beat estimates…" },
+          { t: "dim", s: "# volatility / drawdown not returned" }
+        ]
+      },
+      contrast: {
+        caption: "Split categories — no rule edge. You customize which chunks connect.",
+        lines: [
+          { t: "out", s: "2) CONTRAST - volatility→market · drawdown→portfolio" },
+          { t: "warn", s: "edge_count:  0" },
+          { t: "out", s: "(no edges)" },
+          { t: "ok", s: "OK: no volatility<->drawdown rule edge when categories differ" },
+          { t: "out", s: "takeaway: YOU customize which base chunks connect" }
+        ]
+      },
+      summary: {
+        caption: "Why PrismRAG replaces bolting on another Graph RAG product.",
+        lines: [
+          { t: "ok", s: "You do NOT need a separate Graph RAG library beside PrismRAG." },
+          { t: "out", s: "Same job as Graph RAG — taxonomy builds the graph." },
+          { t: "out", s: "Reply TAXONOMY for an async mapping connection map." },
+          { t: "dim", s: "pip install \"prismrag-patch[graph]==0.2.1\"" }
+        ]
+      }
+    };
+
+    let step = 0;
+    let playing = false;
+    const screen = document.getElementById("screen");
+    const caption = document.getElementById("caption");
+    const progress = document.getElementById("progress");
+    const prevBtn = document.getElementById("prev");
+    const nextBtn = document.getElementById("next");
+    const playBtn = document.getElementById("play");
+    const stepLabel = document.getElementById("stepLabel");
+
+    STEPS.forEach(() => {
+      const p = document.createElement("div");
+      p.className = "pip";
+      progress.appendChild(p);
+    });
+
+    function cls(type) {
+      return { prompt: "prompt", out: "out", ok: "ok", warn: "warn", dim: "dim" }[type] || "out";
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function renderText(lines) {
+      return lines.map(l => {
+        if (!l.s) return "\n";
+        return `<span class="${cls(l.t)}">${escapeHtml(l.s)}</span>\n`;
+      }).join("");
+    }
+
+    function showContent(payload, animate) {
+      caption.textContent = payload.caption;
+      if (!animate) {
+        screen.innerHTML = renderText(payload.lines);
+        return;
+      }
+      screen.innerHTML = "";
+      let lineIdx = 0;
+      let charIdx = 0;
+      const full = payload.lines;
+      function typeTick() {
+        if (lineIdx >= full.length) return;
+        const line = full[lineIdx];
+        if (charIdx === 0) {
+          const span = document.createElement("span");
+          span.className = cls(line.t);
+          span.id = "line-" + lineIdx;
+          screen.appendChild(span);
+          screen.appendChild(document.createTextNode("\n"));
+        }
+        const span = document.getElementById("line-" + lineIdx);
+        if (!line.s) {
+          lineIdx++;
+          charIdx = 0;
+          setTimeout(typeTick, 40);
+          return;
+        }
+        span.textContent = line.s.slice(0, charIdx + 1);
+        charIdx++;
+        if (charIdx >= line.s.length) {
+          lineIdx++;
+          charIdx = 0;
+        }
+        setTimeout(typeTick, line.t === "prompt" ? 16 : 10);
+      }
+      typeTick();
+    }
+
+    function showStep(i, animate) {
+      step = i;
+      document.querySelectorAll("#chips button").forEach(b => b.classList.remove("active"));
+      stepLabel.textContent = `Step ${i + 1} / ${STEPS.length}`;
+      prevBtn.disabled = i === 0;
+      nextBtn.disabled = i === STEPS.length - 1;
+      nextBtn.textContent = i === STEPS.length - 1 ? "Done" : "Next step →";
+      [...progress.children].forEach((el, j) => el.classList.toggle("on", j <= i));
+      showContent(STEPS[i], animate);
+    }
+
+    prevBtn.addEventListener("click", () => { playing = false; showStep(step - 1, false); });
+    nextBtn.addEventListener("click", () => {
+      playing = false;
+      if (step < STEPS.length - 1) showStep(step + 1, true);
+    });
+    playBtn.addEventListener("click", async () => {
+      playing = true;
+      for (let i = 0; i < STEPS.length; i++) {
+        if (!playing) break;
+        showStep(i, true);
+        await new Promise(r => setTimeout(r, i >= 4 ? 3400 : 2600));
+      }
+      playing = false;
+    });
+
+    document.getElementById("chips").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-q]");
+      if (!btn) return;
+      playing = false;
+      document.querySelectorAll("#chips button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      showContent(QUERIES[btn.dataset.q], true);
+    });
+
+    showStep(0, true);
+  </script>
+</body>
+</html>

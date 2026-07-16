@@ -16,7 +16,8 @@ pip install "prismrag-patch[graph]"
 
 | Start here | Link |
 |------------|------|
-| **Smoke demo** (run) | [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) · [`demo_taxonomy_connection.py`](examples/graph-rag-replacement/demo_taxonomy_connection.py) |
+| **Live demo** (browser) | [`docs/demo.html`](docs/demo.html) → https://insightitsgit.github.io/prismrag/demo.html |
+| **Smoke demo** (run Python) | [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) |
 | **Taxonomy Scorecard** (read) | [`docs/taxonomy-scorecard.md`](docs/taxonomy-scorecard.md) |
 | Product deep-dive | [`INFO.md`](INFO.md) |
 | Package API | [`prismrag_patch/README.md`](prismrag_patch/README.md) |
@@ -55,6 +56,10 @@ So for domain RAG: **you do not bolt on another Graph RAG product.** PrismRAG al
 
 ## Smoke it (60 seconds)
 
+**Browser (PrismGuard-style interactive demo):**  
+https://insightitsgit.github.io/prismrag/demo.html · source [`docs/demo.html`](docs/demo.html)
+
+**CLI (real library):**
 Proves shared category → rule edge → both chunks retrieved via `graph_rag` — and prints:
 
 > You do NOT need a separate Graph RAG library beside PrismRAG.
@@ -68,7 +73,8 @@ pytest test_demo.py -v
 ```
 
 **Live folder:** https://github.com/insightitsGit/prismrag/tree/main/examples/graph-rag-replacement  
-**Scorecard:** https://github.com/insightitsGit/prismrag/blob/main/docs/taxonomy-scorecard.md
+**Scorecard:** https://github.com/insightitsGit/prismrag/blob/main/docs/taxonomy-scorecard.md  
+**Pages setup:** [`docs/GITHUB_PAGES_DEMO.md`](docs/GITHUB_PAGES_DEMO.md)
 
 Soft CTA: reply **TAXONOMY** (issue / DM / email `prismrag@insightits.com`) with a redacted mapping JSON or demo `SUMMARY` for an async one-page connection map — **no calendar**.
 
@@ -177,9 +183,10 @@ Full API matrix: [`prismrag_patch/README.md`](prismrag_patch/README.md).
 | Path | Purpose |
 |------|---------|
 | [`prismrag_patch/`](prismrag_patch/) | **PyPI package** — ship this |
-| [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) | **Smoke demo** — Graph RAG replacement proof |
-| [`examples/demo_app/`](examples/demo_app/) | PyPI install verification + 13 tests |
+| [`docs/demo.html`](docs/demo.html) | **Interactive Pages demo** (PrismGuard-style walkthrough) |
 | [`docs/taxonomy-scorecard.md`](docs/taxonomy-scorecard.md) | Self-serve scorecard · soft CTA **TAXONOMY** |
+| [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) | **CLI smoke demo** — Graph RAG replacement proof |
+| [`examples/demo_app/`](examples/demo_app/) | PyPI install verification + 13 tests |
 | [`INFO.md`](INFO.md) | Landing / FAQ / product canon |
 | [`prismrag/`](prismrag/) | Legacy SaaS API (archived reference) |
 | [`tests/test_lib_*.py`](tests/) | Library parity (CI) |

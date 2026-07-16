@@ -13,7 +13,10 @@ retrieve, optionally reply **TAXONOMY** for a free one-page mapping connection m
 
 ## Smoke demo (run this)
 
-**Folder:** [`examples/graph-rag-replacement/`](../examples/graph-rag-replacement/)  
+**Interactive browser demo (like PrismGuard):**  
+https://insightitsgit.github.io/prismrag/demo.html · [`demo.html`](demo.html)
+
+**Folder (CLI):** [`examples/graph-rag-replacement/`](../examples/graph-rag-replacement/)  
 **Script:** [`demo_taxonomy_connection.py`](../examples/graph-rag-replacement/demo_taxonomy_connection.py)  
 **GitHub:** https://github.com/insightitsGit/prismrag/tree/main/examples/graph-rag-replacement
 
