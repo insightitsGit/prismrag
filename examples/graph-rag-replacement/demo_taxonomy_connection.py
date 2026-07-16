@@ -271,7 +271,7 @@ def main() -> int:
   - Same job as Graph RAG: retrieve via graph structure, not vector lottery alone.
   - Different graph source: YOUR taxonomy rules -> rule edges + personal space.
   - Chunks stay separate (citation / audit). Connection = mapping + graph (+ bridge).
-  - Soft CTA: pip install prismrag-patch | github.com/aminparva84/InsightPrismRAG
+  - Soft CTA: pip install prismrag-patch | github.com/insightitsGit/prismrag
 """
     )
     return 0

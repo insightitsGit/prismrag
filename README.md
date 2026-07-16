@@ -10,7 +10,8 @@
 pip install "prismrag-patch[graph]"
 ```
 
-📄 **[INFO.md](INFO.md)** — product overview, benchmark results, FAQ, landing-page copy.
+📄 **[INFO.md](INFO.md)** — product overview, benchmark results, FAQ, landing-page copy.  
+🧾 **[Taxonomy Scorecard](docs/taxonomy-scorecard.md)** — Graph RAG replacement proof · soft CTA **TAXONOMY**.
 
 **Maintained by:** [Insight IT Solutions](https://insightits.com) · **PyPI:** [`prismrag-patch` 0.2.1](https://pypi.org/project/prismrag-patch/0.2.1/) (published)
 
@@ -57,6 +58,23 @@ for hit in rag.search("diabetes medications", top_k=5)["results"]:
 ```
 
 **Verified benchmark:** [`examples/demo_app`](examples/demo_app) — 13/13 tests vs PyPI 0.2.1, ~0.8s full run. See [INFO.md](INFO.md#verified-benchmark-pypi-021).
+
+---
+
+## Taxonomy Scorecard / Graph RAG replacement
+
+Most Graph RAG tools learn edges from co-occurrence. PrismRAG connects base chunks through **your** taxonomy — shared category → **rule edge** → dual retrieve (chunks stay separate).
+
+→ Full instructions: **[docs/taxonomy-scorecard.md](docs/taxonomy-scorecard.md)**  
+→ Runnable proof: **[examples/graph-rag-replacement/](examples/graph-rag-replacement/)**
+
+```bash
+cd examples/graph-rag-replacement
+pip install -r requirements.txt
+python demo_taxonomy_connection.py
+```
+
+Soft CTA: reply **TAXONOMY** with your mapping JSON or demo `SUMMARY` for a free one-page connection map (async, no calendar).
 
 ---
 
