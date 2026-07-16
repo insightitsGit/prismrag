@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-PrismRAG demo - taxonomy Graph RAG as a replacement for co-occurrence Graph RAG.
+PrismRAG demo - you do not need a separate Graph RAG stack.
 
-Proves (no mega-chunk):
+Proves taxonomy Graph RAG replaces co-occurrence Graph RAG for controlled
+chunk connections (no mega-chunk):
+
   1. Two base chunks stay separate.
   2. Shared category mapping creates an explicit rule edge between their words.
   3. Dual embeddings: 768-d semantic + 256-d personal (category-grounded).
@@ -257,7 +259,7 @@ def demo_bridge() -> None:
 
 
 def main() -> int:
-    print("PrismRAG - Graph RAG replacement demo")
+    print("PrismRAG - you don't need a separate Graph RAG stack")
     print("pip package: prismrag-patch  |  offline deterministic embeddings for CI")
 
     demo_connected_via_shared_category()
@@ -267,9 +269,10 @@ def main() -> int:
     section("SUMMARY")
     print(
         """
-  Replacement pitch (honest):
-  - Same job as Graph RAG: retrieve via graph structure, not vector lottery alone.
-  - Different graph source: YOUR taxonomy rules -> rule edges + personal space.
+  Takeaway:
+  - You do NOT need a separate Graph RAG library beside PrismRAG.
+  - PrismRAG already does the Graph RAG job: rule edges + communities + graph retrieve.
+  - Difference vs classic Graph RAG: YOUR taxonomy builds the graph (not co-occurrence guesswork).
   - Chunks stay separate (citation / audit). Connection = mapping + graph (+ bridge).
   - Soft CTA: pip install prismrag-patch | github.com/insightitsGit/prismrag
 """

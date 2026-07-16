@@ -11,7 +11,8 @@ pip install "prismrag-patch[graph]"
 ```
 
 📄 **[INFO.md](INFO.md)** — product overview, benchmark results, FAQ, landing-page copy.  
-🧾 **[Taxonomy Scorecard](docs/taxonomy-scorecard.md)** — Graph RAG replacement proof · soft CTA **TAXONOMY**.
+🧾 **[Taxonomy Scorecard](docs/taxonomy-scorecard.md)** — why you don’t need a separate Graph RAG stack.  
+🔥 **[Smoke demo](examples/graph-rag-replacement/)** — run `demo_taxonomy_connection.py` (rule edge → dual retrieve → SUMMARY).
 
 **Maintained by:** [Insight IT Solutions](https://insightits.com) · **PyPI:** [`prismrag-patch` 0.2.1](https://pypi.org/project/prismrag-patch/0.2.1/) (published)
 
@@ -61,17 +62,27 @@ for hit in rag.search("diabetes medications", top_k=5)["results"]:
 
 ---
 
-## Taxonomy Scorecard / Graph RAG replacement
+## Taxonomy Scorecard / you don’t need a separate Graph RAG stack
 
-Most Graph RAG tools learn edges from co-occurrence. PrismRAG connects base chunks through **your** taxonomy — shared category → **rule edge** → dual retrieve (chunks stay separate).
+**PrismRAG already is the Graph RAG layer.** You do **not** need to bolt on a co-occurrence Graph RAG library beside it.
 
-→ Full instructions: **[docs/taxonomy-scorecard.md](docs/taxonomy-scorecard.md)**  
-→ Runnable proof: **[examples/graph-rag-replacement/](examples/graph-rag-replacement/)**
+Most Graph RAG tools learn edges from document co-occurrence (same PDFs → same graph for every tenant). PrismRAG inverts that: you define categories + word→category rules → shared category creates an explicit **rule edge** → dual embeddings + Graph RAG search retrieve connected chunks — while chunks stay separate (no mega-chunk).
+
+| | Classic co-occurrence Graph RAG | PrismRAG |
+|--|--------------------------------|----------|
+| Graph source | Corpus statistics | **Your taxonomy mapping** |
+| Extra stack? | Often a separate Graph RAG product | **One** `pip install prismrag-patch` |
+| Same docs, two clients | Same graph | **Different graphs** per mapping |
+
+→ **Scorecard (read):** [docs/taxonomy-scorecard.md](docs/taxonomy-scorecard.md)  
+→ **Smoke demo (run):** [examples/graph-rag-replacement/](examples/graph-rag-replacement/) · script [`demo_taxonomy_connection.py`](examples/graph-rag-replacement/demo_taxonomy_connection.py)
 
 ```bash
 cd examples/graph-rag-replacement
 pip install -r requirements.txt
 python demo_taxonomy_connection.py
+# expect SUMMARY: You do NOT need a separate Graph RAG library beside PrismRAG.
+pytest test_demo.py -v
 ```
 
 Soft CTA: reply **TAXONOMY** with your mapping JSON or demo `SUMMARY` for a free one-page connection map (async, no calendar).

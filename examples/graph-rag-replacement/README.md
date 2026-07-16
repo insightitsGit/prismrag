@@ -1,8 +1,14 @@
-# PrismRAG example — taxonomy Graph RAG replacement
+# PrismRAG example — you don’t need a separate Graph RAG stack
 
-Minimal example that proves **PrismRAG can replace co-occurrence Graph RAG** when you need **controlled connections** between base chunks.
+This is the **smoke demo** for PrismRAG.
 
-**Mechanism:** you customize a mapping (`word → category`) → same-category words get **rule edges** → dual embeddings (768-d semantic + 256-d personal) → Graph RAG search. Chunks stay separate — no mega-chunk.
+**Live on GitHub:** https://github.com/insightitsGit/prismrag/tree/main/examples/graph-rag-replacement  
+
+It proves **PrismRAG replaces co-occurrence Graph RAG** for connecting base chunks. You do **not** need to bolt on a separate Graph RAG library beside it. PrismRAG already ships the Graph RAG job — with a graph **you** define via taxonomy (categories + rules), not a graph guessed from co-occurrence.
+
+**Also read:** [Taxonomy Scorecard](../../docs/taxonomy-scorecard.md) · https://github.com/insightitsGit/prismrag/blob/main/docs/taxonomy-scorecard.md
+
+**Mechanism:** mapping (`word → category`) → **rule edges** → dual embeddings (768-d semantic + 256-d personal) → Graph RAG search. Chunks stay separate — no mega-chunk.
 
 ## Quick start (PyPI)
 
@@ -38,6 +44,8 @@ pytest test_demo.py -v
 | **2** | Contrast: different categories → **no** rule edge |
 | **3** | `create_bridge` links risk/growth communities |
 
+**SUMMARY line you should see:** *You do NOT need a separate Graph RAG library beside PrismRAG.*
+
 ## Mapping snippet (the customization lever)
 
 ```python
@@ -54,13 +62,15 @@ mapping = {
 }
 ```
 
-## Honest positioning
+## Positioning
 
-| Use PrismRAG when… | Prefer classic auto GraphRAG when… |
-|--------------------|-------------------------------------|
-| You can define taxonomy / domain rules | You want zero mapping, corpus-only graph |
-| Auditability of connections matters | Open-domain co-occurrence is enough |
-| Same docs must yield different graphs per client | One statistical graph for everyone |
+| With PrismRAG | Without it (classic Graph RAG) |
+|---------------|--------------------------------|
+| One pip library: taxonomy → rule edges → graph retrieve | Separate Graph RAG stack + co-occurrence graph |
+| You own which chunks connect | Corpus statistics decide the graph |
+| Same docs → different graphs per client mapping | Same docs → same graph for everyone |
+
+**Only edge case for classic auto GraphRAG:** you refuse any mapping and want a fully unsupervised corpus graph. Domain / regulated RAG usually wants the PrismRAG path.
 
 ## Expected output
 
@@ -69,6 +79,8 @@ mapping = {
 
 ## Links
 
+- **This smoke demo (GitHub):** https://github.com/insightitsGit/prismrag/tree/main/examples/graph-rag-replacement
+- **Taxonomy Scorecard:** https://github.com/insightitsGit/prismrag/blob/main/docs/taxonomy-scorecard.md
 - Product INFO: [INFO.md](../../INFO.md)
 - Landing: https://www.insightits.com/products/prismrag.html
 - PyPI: https://pypi.org/project/prismrag-patch/
