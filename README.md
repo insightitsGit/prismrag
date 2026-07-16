@@ -1,137 +1,174 @@
-# PrismRAG — taxonomy-grounded Graph RAG (open source)
+# PrismRAG
 
-**Stop RAG category bleed.** Define your mapping (categories + word→category rules); PrismRAG ingests data into *your* vector space, builds a graph on *your* taxonomy, and runs Graph RAG search with a full audit trail.
+**You don’t need a separate Graph RAG stack.**
 
-[![PyPI](https://img.shields.io/pypi/v/prismrag-patch)](https://pypi.org/project/prismrag-patch/0.2.1/)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](prismrag_patch/LICENSE)
-[![Python](https://img.shields.io/pypi/pyversions/prismrag-patch)](https://pypi.org/project/prismrag-patch/)
+PrismRAG is taxonomy-grounded Graph RAG in one Apache-2.0 library: you define categories + word→category rules, same-category words get **rule edges**, dual embeddings power retrieval, and chunks stay separate — no mega-chunk, no co-occurrence guesswork.
 
 ```bash
 pip install "prismrag-patch[graph]"
 ```
 
-📄 **[INFO.md](INFO.md)** — product overview, benchmark results, FAQ, landing-page copy.  
-🧾 **[Taxonomy Scorecard](docs/taxonomy-scorecard.md)** — why you don’t need a separate Graph RAG stack.  
-🔥 **[Smoke demo](examples/graph-rag-replacement/)** — run `demo_taxonomy_connection.py` (rule edge → dual retrieve → SUMMARY).
+[![PyPI](https://img.shields.io/pypi/v/prismrag-patch)](https://pypi.org/project/prismrag-patch/0.2.1/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](prismrag_patch/LICENSE)
+[![Python](https://img.shields.io/pypi/pyversions/prismrag-patch)](https://pypi.org/project/prismrag-patch/)
 
-**Maintained by:** [Insight IT Solutions](https://insightits.com) · **PyPI:** [`prismrag-patch` 0.2.1](https://pypi.org/project/prismrag-patch/0.2.1/) (published)
+**Maintained by** [Insight IT Solutions](https://www.insightits.com) · **PyPI** [`prismrag-patch` 0.2.1](https://pypi.org/project/prismrag-patch/0.2.1/) · **Landing** https://www.insightits.com/products/prismrag.html
 
----
-
-## Why PrismRAG?
-
-| Problem with standard RAG / Graph RAG | PrismRAG approach |
-|--------------------------------------|-------------------|
-| Wrong category in retrieval (“category bleed”) | Every chunk assigned from **your mapping rules** |
-| Graph from document co-occurrence | Graph from **your taxonomy** + semantic edges |
-| Black-box retrieval | Every hit traces to a **mapping_rule** |
-| Hosted platform lock-in | **`pip install`**, MemoryStore or your Postgres |
-| Per-seat / API metering | **Free** Apache-2.0 library |
-
-You supply the **mapping table**. The library does the rest: dual-vector projection, word graph, Louvain communities, Graph RAG search, bridges, append, and quality scoring.
+| Start here | Link |
+|------------|------|
+| **Smoke demo** (run) | [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) · [`demo_taxonomy_connection.py`](examples/graph-rag-replacement/demo_taxonomy_connection.py) |
+| **Taxonomy Scorecard** (read) | [`docs/taxonomy-scorecard.md`](docs/taxonomy-scorecard.md) |
+| Product deep-dive | [`INFO.md`](INFO.md) |
+| Package API | [`prismrag_patch/README.md`](prismrag_patch/README.md) |
 
 ---
 
-## Quick start
+## The real power (honest)
+
+Standard Graph RAG builds a graph from **document co-occurrence** (or LLM extraction). Same PDFs → same graph for every tenant. When two base chunks should connect, you get a statistical guess — not a mapping you own.
+
+**PrismRAG inverts that:**
+
+1. **You customize the taxonomy** — categories + Tier-1 `word → category` rules  
+2. **Same category → rule edge** — explicit graph link between base chunks (they stay separate)  
+3. **Dual embeddings per chunk** — 768-d semantic + **256-d personal** (category-grounded projection)  
+4. **Graph RAG search** — communities → word-graph hop → semantic re-rank (direct fallback when needed)  
+5. **Optional bridges** — connect communities for cross-topic hops without merging documents  
+
+So for domain RAG: **you do not bolt on another Graph RAG product.** PrismRAG already *is* the Graph RAG layer — taxonomy-first, auditable, pip-installable.
+
+**Narrow caveat:** if you refuse any mapping and want a fully unsupervised corpus graph, classic auto GraphRAG is closer. Most regulated / multi-tenant RAG is not that case.
+
+---
+
+## Compete with (Dunford)
+
+| We compete with | We do **not** compete with |
+|-----------------|----------------------------|
+| Co-occurrence / “auto” Graph RAG stacks | Vector DB vendors as the hero story |
+| Vector-only lottery (similarity without taxonomy) | PrismGuard (injection firewall) · ChorusGraph (agent runtime) |
+| Black-box “the model figured out the graph” | Hosted Graph RAG SaaS lock-in |
+
+**Category one-liner:** taxonomy-grounded Graph RAG — your rules build the graph; co-occurrence Graph RAG guesses it from the corpus.
+
+---
+
+## Smoke it (60 seconds)
+
+Proves shared category → rule edge → both chunks retrieved via `graph_rag` — and prints:
+
+> You do NOT need a separate Graph RAG library beside PrismRAG.
+
+```bash
+git clone https://github.com/insightitsGit/prismrag.git
+cd prismrag/examples/graph-rag-replacement
+pip install -r requirements.txt
+python demo_taxonomy_connection.py
+pytest test_demo.py -v
+```
+
+**Live folder:** https://github.com/insightitsGit/prismrag/tree/main/examples/graph-rag-replacement  
+**Scorecard:** https://github.com/insightitsGit/prismrag/blob/main/docs/taxonomy-scorecard.md
+
+Soft CTA: reply **TAXONOMY** (issue / DM / email `prismrag@insightits.com`) with a redacted mapping JSON or demo `SUMMARY` for an async one-page connection map — **no calendar**.
+
+---
+
+## Quick start (library)
 
 ```python
 from prismrag_patch import PrismRAG
 
 mapping = {
     "categories": [
-        {"slug": "medication",  "label": "Medication"},
-        {"slug": "lab_results", "label": "Lab Results"},
+        {"slug": "risk", "label": "Risk & Compliance"},
+        {"slug": "growth", "label": "Growth & Revenue"},
     ],
     "rules": [
-        {"word": "metformin", "category_slug": "medication"},
-        {"word": "troponin",  "category_slug": "lab_results"},
+        {"word": "volatility", "category_slug": "risk"},
+        {"word": "drawdown", "category_slug": "risk"},  # same category → rule edge
+        {"word": "revenue", "category_slug": "growth"},
     ],
 }
 
 rag = PrismRAG(mapping=mapping, tenant_id="demo")
 rag.ingest(records=[
-    {"word": "metformin", "text": "metformin for diabetes"},
-    {"word": "troponin",  "text": "troponin cardiac marker"},
+    {"word": "volatility", "text": "Market volatility spiked in Q3 amid rate uncertainty."},
+    {"word": "drawdown", "text": "Portfolio drawdown exceeded the 10 percent risk budget."},
+    {"word": "revenue", "text": "Q3 revenue beat estimates on enterprise ARR growth."},
 ])
 
-for hit in rag.search("diabetes medications", top_k=5)["results"]:
-    print(hit["category_slug"], hit["chunk_ref"])
+hits = rag.search("What are the risk metrics for the portfolio?", top_k=5)
+for h in hits["results"]:
+    print(h["category_slug"], h["chunk_ref"], h["chunk_text"][:60])
 ```
 
-**Verified benchmark:** [`examples/demo_app`](examples/demo_app) — 13/13 tests vs PyPI 0.2.1, ~0.8s full run. See [INFO.md](INFO.md#verified-benchmark-pypi-021).
+Bring your own `embed_fn` in production (Gemini / OpenAI / local). The library ships deterministic embeddings for offline tests and CI.
+
+**Verified install bench:** [`examples/demo_app`](examples/demo_app) — 13/13 tests vs PyPI 0.2.1. See [INFO.md](INFO.md#verified-benchmark-pypi-021).
 
 ---
 
-## Taxonomy Scorecard / you don’t need a separate Graph RAG stack
+## What ships in the library
 
-**PrismRAG already is the Graph RAG layer.** You do **not** need to bolt on a co-occurrence Graph RAG library beside it.
+| Capability | What it means |
+|------------|----------------|
+| **Tier-1 mapping** | Auditable word→category rules; every hit can trace to a rule |
+| **Dual vectors** | 768-d semantic + 256-d personal projection |
+| **Word graph** | Rule edges (same category) + optional semantic edges |
+| **Louvain communities** | Topic clusters for Graph RAG routing |
+| **Graph RAG search** | Community seed → BFS → re-rank · `category_filter` supported |
+| **Bridges** | `create_bridge(a, b)` for cross-community hops |
+| **Append** | New chunks / rules without full retrain · chunk quality scores |
+| **Stores** | `MemoryStore` (default) · `PostgresStore` (`prismrag.*`) |
+| **Adapters** | Tier-1 remap onto pgvector / Chroma / Pinecone / Weaviate |
 
-Most Graph RAG tools learn edges from document co-occurrence (same PDFs → same graph for every tenant). PrismRAG inverts that: you define categories + word→category rules → shared category creates an explicit **rule edge** → dual embeddings + Graph RAG search retrieve connected chunks — while chunks stay separate (no mega-chunk).
+```
+Your app
+  └─ PrismRAG
+       ├─ ingest → map → dual embed → graph → communities
+       ├─ search → graph_rag | direct fallback
+       ├─ create_bridge / append_chunks / chunk_quality
+       └─ MemoryStore | PostgresStore | vector adapters
+```
 
-| | Classic co-occurrence Graph RAG | PrismRAG |
-|--|--------------------------------|----------|
-| Graph source | Corpus statistics | **Your taxonomy mapping** |
-| Extra stack? | Often a separate Graph RAG product | **One** `pip install prismrag-patch` |
-| Same docs, two clients | Same graph | **Different graphs** per mapping |
+---
 
-→ **Scorecard (read):** [docs/taxonomy-scorecard.md](docs/taxonomy-scorecard.md)  
-→ **Smoke demo (run):** [examples/graph-rag-replacement/](examples/graph-rag-replacement/) · script [`demo_taxonomy_connection.py`](examples/graph-rag-replacement/demo_taxonomy_connection.py)
+## Who it’s for
+
+- Eng teams who need **controlled connections** between base chunks — not corpus lottery  
+- Regulated domains (healthcare, finance, legal) where retrieval must explain **which rule** applied  
+- Multi-tenant / consultancy setups: **same docs → different graphs** per client mapping  
+- Anyone tired of bolting a second Graph RAG product onto an existing vector store  
+
+### Domain sketches
+
+| Domain | Mapping idea |
+|--------|----------------|
+| Healthcare | `medication` vs `lab_results` — “insulin management” stays on meds, not random co-symptoms |
+| Finance | `risk` vs `growth` — VaR / volatility stay in risk even when embeddings blur |
+| Enterprise KB | Each BU ships a mapping JSON; one SharePoint dump → many tenant graphs |
+
+---
+
+## Install
 
 ```bash
-cd examples/graph-rag-replacement
-pip install -r requirements.txt
-python demo_taxonomy_connection.py
-# expect SUMMARY: You do NOT need a separate Graph RAG library beside PrismRAG.
-pytest test_demo.py -v
+pip install prismrag-patch                      # core
+pip install "prismrag-patch[graph]"             # + Louvain (recommended)
+pip install "prismrag-patch[graph,pgvector]"    # + PostgresStore + pgvector
+pip install "prismrag-patch[all]"               # all optional deps
 ```
 
-Soft CTA: reply **TAXONOMY** with your mapping JSON or demo `SUMMARY` for a free one-page connection map (async, no calendar).
+Python 3.9+. No license key. Core path needs no network.
 
----
+| Backend | When |
+|---------|------|
+| **MemoryStore** | Notebooks, tests, smoke demo |
+| **PostgresStore** | Production — [`prismrag/schema.sql`](prismrag/schema.sql) |
+| **Vector adapters** | Remap only — keep your existing chunk table |
 
-## Use cases
-
-### Healthcare & clinical informatics
-
-Map `diagnosis`, `medication`, `lab_results`, `symptoms`, `patient_safety`. Query *“insulin management”* returns medication-category chunks — not random co-occurring symptoms. Required when EHR/RAG systems must explain **why** a document was retrieved.
-
-### Finance, risk & compliance
-
-Categories: `risk`, `valuation`, `liquidity`, `regulatory`. Keep *VaR*, *volatility*, and *exposure* in **risk** even when embeddings blur finance vs growth language. Audit trail from rule → chunk → search result for regulators.
-
-### Pharmacy & life sciences
-
-Separate `drug_interactions`, `pharmacokinetics`, `storage`, `contraindications`. Prevents cross-contamination in agent retrieval (e.g. storage conditions mixed with dosing advice).
-
-### Enterprise knowledge bases
-
-Each business unit submits a mapping JSON; the **same SharePoint or Confluence export** yields **different graphs** per unit. Consultants white-label per client without re-ingesting into a shared SaaS.
-
-### AI agents & production RAG
-
-Use `PrismRAG` in-process or `PostgresStore` on your DB. Optional **pgvector / Chroma / Pinecone / Weaviate** adapters for Tier-1 remap on existing vector stores. Bring your own `embed_fn` (OpenAI, Gemini, local models).
-
-### Regulated & high-stakes domains
-
-Legal, insurance, government: enforce **hard category boundaries** at retrieval (`category_filter`) and export dual vectors for downstream agents — no data leaves your environment unless you choose.
-
----
-
-## Your mapping drives everything
-
-```python
-# From JSON, CSV, Excel, or your SQL table — build this dict:
-mapping = {"categories": [...], "rules": [{"word": "...", "category_slug": "..."}]}
-rag = PrismRAG(mapping=mapping, tenant_id="acme")
-```
-
-| Backend | When to use |
-|---------|-------------|
-| **MemoryStore** (default) | Notebooks, tests, prototypes |
-| **PostgresStore** | Production — `prismrag.*` schema ([`prismrag/schema.sql`](prismrag/schema.sql)) |
-| **Vector adapters** | Tier-1 remap only on existing pgvector / Chroma / Pinecone / Weaviate |
-
-See [`prismrag_patch/README.md`](prismrag_patch/README.md) for Postgres, adapters, and API parity matrix.
+Full API matrix: [`prismrag_patch/README.md`](prismrag_patch/README.md).
 
 ---
 
@@ -140,11 +177,12 @@ See [`prismrag_patch/README.md`](prismrag_patch/README.md) for Postgres, adapter
 | Path | Purpose |
 |------|---------|
 | [`prismrag_patch/`](prismrag_patch/) | **PyPI package** — ship this |
-| [`examples/demo_app/`](examples/demo_app/) | PyPI install demo + 13 integration tests + event logs |
-| [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) | Taxonomy mapping → rule edges → dual retrieve (Graph RAG replacement proof) |
-| [`prismrag/`](prismrag/) | Legacy SaaS API (archived, not deployed) |
-| [`tests/test_lib_*.py`](tests/) | Library parity tests (CI) |
-| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | CI build + test |
+| [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) | **Smoke demo** — Graph RAG replacement proof |
+| [`examples/demo_app/`](examples/demo_app/) | PyPI install verification + 13 tests |
+| [`docs/taxonomy-scorecard.md`](docs/taxonomy-scorecard.md) | Self-serve scorecard · soft CTA **TAXONOMY** |
+| [`INFO.md`](INFO.md) | Landing / FAQ / product canon |
+| [`prismrag/`](prismrag/) | Legacy SaaS API (archived reference) |
+| [`tests/test_lib_*.py`](tests/) | Library parity (CI) |
 
 ---
 
@@ -153,27 +191,25 @@ See [`prismrag_patch/README.md`](prismrag_patch/README.md) for Postgres, adapter
 ```bash
 pip install -e "prismrag_patch[graph]"
 pytest tests/test_lib_step*.py -v
-```
 
-```bash
+cd examples/graph-rag-replacement && pip install -r requirements.txt
+python demo_taxonomy_connection.py && pytest test_demo.py -v
+
 cd examples/demo_app && python run_verification.py
-```
-
-```bash
-cd examples/graph-rag-replacement
-pip install -r requirements.txt
-python demo_taxonomy_connection.py
-pytest test_demo.py -v
 ```
 
 ---
 
-## Publish to PyPI
+## Publish
 
-Already published: **0.2.1**. For next release, bump `prismrag_patch/pyproject.toml` and run `twine upload`. See [`DOC/pypi-publish.md`](DOC/pypi-publish.md).
+Published: **0.2.1**. Next bump: `prismrag_patch/pyproject.toml` + [`DOC/pypi-publish.md`](DOC/pypi-publish.md).
 
 ---
 
 ## License
 
-Apache-2.0 — see [`prismrag_patch/LICENSE`](prismrag_patch/LICENSE).
+Apache-2.0 — [`prismrag_patch/LICENSE`](prismrag_patch/LICENSE).
+
+---
+
+`voice:research-b2b` · soft CTA **TAXONOMY** · never cold Calendly · proof only from smoke demo + published INFO benches
