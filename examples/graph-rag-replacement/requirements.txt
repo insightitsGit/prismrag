@@ -1,0 +1,3 @@
+prismrag-patch[graph]>=0.2.1
+pytest>=7.0
+numpy>=1.24

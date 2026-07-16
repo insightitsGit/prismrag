@@ -112,6 +112,7 @@ See [`prismrag_patch/README.md`](prismrag_patch/README.md) for Postgres, adapter
 |------|---------|
 | [`prismrag_patch/`](prismrag_patch/) | **PyPI package** — ship this |
 | [`examples/demo_app/`](examples/demo_app/) | PyPI install demo + 13 integration tests + event logs |
+| [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) | Taxonomy mapping → rule edges → dual retrieve (Graph RAG replacement proof) |
 | [`prismrag/`](prismrag/) | Legacy SaaS API (archived, not deployed) |
 | [`tests/test_lib_*.py`](tests/) | Library parity tests (CI) |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | CI build + test |
@@ -127,6 +128,13 @@ pytest tests/test_lib_step*.py -v
 
 ```bash
 cd examples/demo_app && python run_verification.py
+```
+
+```bash
+cd examples/graph-rag-replacement
+pip install -r requirements.txt
+python demo_taxonomy_connection.py
+pytest test_demo.py -v
 ```
 
 ---
