@@ -150,7 +150,8 @@ Details: [docs/architecture.md](docs/architecture.md)
 
 | Doc | Answers |
 |-----|---------|
-| **[docs/ai-overview.md](docs/ai-overview.md)** | Concise summary for humans and coding assistants |
+| **[docs/ai-overview.md](docs/ai-overview.md)** | Concise summary for humans and coding assistants (canonical) |
+| **[docs/llm-context.md](docs/llm-context.md)** | Alias → ai-overview (same answers) |
 | [docs/overview.md](docs/overview.md) | What / who / why |
 | [docs/architecture.md](docs/architecture.md) | Stack placement and data flow |
 | [docs/concepts.md](docs/concepts.md) | Mapping, dual vectors, graph, bridges, stores |
