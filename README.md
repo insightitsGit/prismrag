@@ -42,6 +42,53 @@ So for domain RAG: **you do not bolt on another Graph RAG product.** PrismRAG al
 
 ---
 
+## Feature: Graph RAG replacement
+
+### Use case
+
+Teams building production RAG often need **two base chunks to retrieve together** (e.g. `volatility` and `drawdown` under risk). Classic options:
+
+| Approach | Problem |
+|----------|---------|
+| Mega-chunk merge | Loses citations, audit trail, and fine retrieval |
+| Vector similarity alone | Category bleed — growth text can rank next to risk |
+| Bolt-on co-occurrence Graph RAG | Extra stack; same docs → same graph for every tenant; connections you don’t own |
+
+**Buyer need:** controlled, auditable connections between chunks — without a second Graph RAG product.
+
+### How PrismRAG resolves it (library feature)
+
+Graph RAG replacement is not a side demo — it is how the library works:
+
+| Step | Library behavior | API |
+|------|------------------|-----|
+| 1. Keep chunks separate | No mega-chunk; each record stays its own citation | `ingest(records=[...])` |
+| 2. Customize taxonomy | You define categories + word→category rules | `PrismRAG(mapping=...)` |
+| 3. Connect via shared category | Same `category_slug` → explicit **rule edge** in the word graph | built on ingest |
+| 4. Dual embeddings | 768-d semantic + **256-d personal** (category-grounded) | stored per chunk |
+| 5. Graph retrieve | Communities → BFS on word graph → re-rank | `search(...)` → `mode: graph_rag` |
+| 6. Cross-topic when needed | Synthetic hop without merging docs | `create_bridge(a, b)` |
+| 7. Prove the lever | Split categories → rule edge disappears | contrast path in smoke demo |
+
+**Result:** one `pip install "prismrag-patch[graph]"` replaces bolting on co-occurrence Graph RAG for domain / multi-tenant stacks.
+
+### See it working
+
+| Surface | URL |
+|---------|-----|
+| Interactive demo | https://insightitsgit.github.io/prismrag/demo.html · [`docs/demo.html`](docs/demo.html) |
+| CLI smoke | [`examples/graph-rag-replacement/`](examples/graph-rag-replacement/) |
+| Scorecard | [`docs/taxonomy-scorecard.md`](docs/taxonomy-scorecard.md) |
+
+```bash
+cd examples/graph-rag-replacement
+pip install -r requirements.txt
+python demo_taxonomy_connection.py
+# SUMMARY: You do NOT need a separate Graph RAG library beside PrismRAG.
+```
+
+---
+
 ## Compete with (Dunford)
 
 | We compete with | We do **not** compete with |
@@ -119,6 +166,7 @@ Bring your own `embed_fn` in production (Gemini / OpenAI / local). The library s
 
 | Capability | What it means |
 |------------|----------------|
+| **Graph RAG replacement** | Taxonomy → rule edges → graph retrieve in-process — no separate Graph RAG product |
 | **Tier-1 mapping** | Auditable word→category rules; every hit can trace to a rule |
 | **Dual vectors** | 768-d semantic + 256-d personal projection |
 | **Word graph** | Rule edges (same category) + optional semantic edges |
